@@ -56,6 +56,10 @@
               <label for="pensionContributions">Gross personal pension contributions (relief at source)</label>
               <input id="pensionContributions" name="pensionContributions" type="number" min="0" step="100" value="0" />
             </div>
+            <div class="field checkbox">
+              <label for="scottishResident">Scottish resident (income tax bands only)</label>
+              <input id="scottishResident" name="scottishResident" type="checkbox" />
+            </div>
           </div>
 
           <h3 class="subheading">EIS / SEIS / VCT investments</h3>
@@ -166,6 +170,8 @@
       <section class="card" aria-labelledby="assumptions-title">
         <h2 id="assumptions-title">Assumptions & regulatory notes</h2>
         <ul class="notes" id="assumptionsList"></ul>
+        <p class="meta" id="ratesUpdated"></p>
+        <ul class="notes" id="sourcesList"></ul>
       </section>
     </main>
 

@@ -7,6 +7,14 @@ const CONFIG = {
   higherRateThreshold: 125140,
   dividendAllowance: 500,
   cgtAnnualExempt: 3000,
+  scotlandBands: [
+    { limit: 2827, rate: 0.19 },
+    { limit: 14921, rate: 0.2 },
+    { limit: 31092, rate: 0.21 },
+    { limit: 62430, rate: 0.42 },
+    { limit: 112570, rate: 0.45 },
+    { limit: Number.POSITIVE_INFINITY, rate: 0.48 },
+  ],
   rates: {
     income: {
       basic: 0.2,
@@ -63,6 +71,23 @@ const applyBand = (amount, bandAvailable) => {
   };
 };
 
+const calculateScottishIncomeTax = (taxableNonSavings) => {
+  let remaining = taxableNonSavings;
+  let tax = 0;
+  let lowerLimit = 0;
+  CONFIG.scotlandBands.forEach((band) => {
+    if (remaining <= 0) {
+      return;
+    }
+    const bandSize = band.limit === Number.POSITIVE_INFINITY ? remaining : band.limit - lowerLimit;
+    const taxableAtBand = Math.min(remaining, bandSize);
+    tax += taxableAtBand * band.rate;
+    remaining -= taxableAtBand;
+    lowerLimit = band.limit;
+  });
+  return tax;
+};
+
 const calculateTax = (inputs) => {
   const employmentIncome = clamp(inputs.employmentIncome);
   const selfEmploymentIncome = clamp(inputs.selfEmploymentIncome);
@@ -97,10 +122,12 @@ const calculateTax = (inputs) => {
     taxableNonSavings - basicRateBand - higherBandLimit
   );
 
-  const incomeTax =
-    nonSavingsInBasic * CONFIG.rates.income.basic +
-    nonSavingsInHigher * CONFIG.rates.income.higher +
-    nonSavingsInAdditional * CONFIG.rates.income.additional;
+  const isScottish = Boolean(inputs.scottishResident);
+  const incomeTax = isScottish
+    ? calculateScottishIncomeTax(taxableNonSavings)
+    : nonSavingsInBasic * CONFIG.rates.income.basic +
+      nonSavingsInHigher * CONFIG.rates.income.higher +
+      nonSavingsInAdditional * CONFIG.rates.income.additional;
 
   let basicRemaining = Math.max(0, basicRateBand - nonSavingsInBasic);
   let higherRemaining = Math.max(0, higherBandLimit - nonSavingsInHigher);
@@ -165,6 +192,7 @@ const calculateTax = (inputs) => {
       capitalGains,
       capitalGainsResidential,
       pensionContributions,
+      scottishResident: Boolean(inputs.scottishResident),
       eisInvestment: clamp(inputs.eisInvestment),
       seisInvestment: clamp(inputs.seisInvestment),
       vctInvestment: clamp(inputs.vctInvestment),

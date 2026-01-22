@@ -44,6 +44,25 @@ const near = (actual, expected, tolerance = 1) => {
 
 {
   const result = calculateTax({
+    employmentIncome: 30000,
+    selfEmploymentIncome: 0,
+    otherIncome: 0,
+    dividends: 0,
+    capitalGains: 0,
+    capitalGainsResidential: 0,
+    pensionContributions: 0,
+    scottishResident: true,
+    eisInvestment: 0,
+    seisInvestment: 0,
+    vctInvestment: 0,
+  });
+
+  // Scottish income tax example for 2025/26: taxable income 17,430.
+  near(result.totals.incomeTax, 3483, 2);
+}
+
+{
+  const result = calculateTax({
     employmentIncome: 0,
     selfEmploymentIncome: 0,
     otherIncome: 0,

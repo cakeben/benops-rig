@@ -70,6 +70,41 @@ const renderAssumptions = () => {
   updated.textContent = "Rates updated on 2026-01-22.";
 };
 
+const renderRateTables = () => {
+  const ukTable = document.getElementById("ratesUk");
+  const ukRows = [
+    ["Personal allowance", `Up to GBP ${CONFIG.personalAllowance.toLocaleString("en-GB")}`, "0%"],
+    [
+      "Basic rate",
+      `GBP ${CONFIG.personalAllowance.toLocaleString("en-GB")} to GBP ${(CONFIG.personalAllowance + CONFIG.basicRateBand).toLocaleString("en-GB")}`,
+      "20%",
+    ],
+    [
+      "Higher rate",
+      `GBP ${(CONFIG.personalAllowance + CONFIG.basicRateBand + 1).toLocaleString("en-GB")} to GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`,
+      "40%",
+    ],
+    ["Additional rate", `Over GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`, "45%"],
+  ];
+  ukTable.innerHTML = `<table class=\"rates-table\"><thead><tr><th>Band</th><th>Taxable income</th><th>Rate</th></tr></thead><tbody>${ukRows
+    .map((row) => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`)
+    .join("")}</tbody></table>`;
+
+  const scotTable = document.getElementById("ratesScotland");
+  const scotRows = [
+    ["Personal allowance", "Up to GBP 12,570", "0%"],
+    ["Starter rate", "GBP 12,571 to GBP 15,397", "19%"],
+    ["Basic rate", "GBP 15,398 to GBP 27,491", "20%"],
+    ["Intermediate rate", "GBP 27,492 to GBP 43,662", "21%"],
+    ["Higher rate", "GBP 43,663 to GBP 75,000", "42%"],
+    ["Advanced rate", "GBP 75,001 to GBP 125,140", "45%"],
+    ["Top rate", "Over GBP 125,140", "48%"],
+  ];
+  scotTable.innerHTML = `<table class=\"rates-table\"><thead><tr><th>Band</th><th>Taxable income</th><th>Rate</th></tr></thead><tbody>${scotRows
+    .map((row) => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`)
+    .join("")}</tbody></table>`;
+};
+
 const renderInvestmentNotes = (results) => {
   const notes = [];
   if (results.inputs.eisInvestment > results.reliefs.eisQualifying) {
@@ -113,5 +148,6 @@ const bindEvents = () => {
 };
 
 renderAssumptions();
+renderRateTables();
 render();
 bindEvents();

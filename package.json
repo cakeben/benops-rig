@@ -1,0 +1,8 @@
+{
+  "name": "uk-tax-relief-calculator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/test_calculator.mjs"
+  }
+}

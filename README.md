@@ -1,17 +1,20 @@
 # benops-rig
 
-UK-focused tax calculator prototype.
+UK-focused tax calculator prototype (Svelte + Vite).
 
 ## Run locally
 
-Open `index.html` in a browser (no build step required).
+```bash
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+```
 
 ## GitHub Pages
 
 This repo deploys automatically on every commit to `main` via GitHub Actions.
-
-## Tests
-
-```bash
-node scripts/test_calculator.mjs
-```

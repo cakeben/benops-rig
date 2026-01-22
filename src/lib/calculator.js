@@ -1,4 +1,4 @@
-const CONFIG = {
+export const CONFIG = {
   taxYear: "2025/26",
   personalAllowance: 12570,
   personalAllowanceTaperStart: 100000,
@@ -13,40 +13,40 @@ const CONFIG = {
     { limit: 31092, rate: 0.21 },
     { limit: 62430, rate: 0.42 },
     { limit: 112570, rate: 0.45 },
-    { limit: Number.POSITIVE_INFINITY, rate: 0.48 },
+    { limit: Number.POSITIVE_INFINITY, rate: 0.48 }
   ],
   rates: {
     income: {
       basic: 0.2,
       higher: 0.4,
-      additional: 0.45,
+      additional: 0.45
     },
     dividends: {
       basic: 0.0875,
       higher: 0.3375,
-      additional: 0.3935,
+      additional: 0.3935
     },
     cgt: {
       nonResidential: {
         basic: 0.18,
-        higher: 0.24,
+        higher: 0.24
       },
       residential: {
         basic: 0.18,
-        higher: 0.24,
-      },
-    },
+        higher: 0.24
+      }
+    }
   },
   reliefLimits: {
     eis: 1_000_000,
     seis: 200_000,
-    vct: 200_000,
+    vct: 200_000
   },
   reliefRates: {
     eis: 0.3,
     seis: 0.5,
-    vct: 0.2,
-  },
+    vct: 0.2
+  }
 };
 
 const clamp = (value) => Math.max(0, Number(value) || 0);
@@ -67,7 +67,7 @@ const applyBand = (amount, bandAvailable) => {
   return {
     used,
     remaining: Math.max(0, amount - used),
-    bandRemaining: Math.max(0, bandAvailable - used),
+    bandRemaining: Math.max(0, bandAvailable - used)
   };
 };
 
@@ -79,7 +79,8 @@ const calculateScottishIncomeTax = (taxableNonSavings) => {
     if (remaining <= 0) {
       return;
     }
-    const bandSize = band.limit === Number.POSITIVE_INFINITY ? remaining : band.limit - lowerLimit;
+    const bandSize =
+      band.limit === Number.POSITIVE_INFINITY ? remaining : band.limit - lowerLimit;
     const taxableAtBand = Math.min(remaining, bandSize);
     tax += taxableAtBand * band.rate;
     remaining -= taxableAtBand;
@@ -88,7 +89,7 @@ const calculateScottishIncomeTax = (taxableNonSavings) => {
   return tax;
 };
 
-const calculateTax = (inputs) => {
+export const calculateTax = (inputs) => {
   const employmentIncome = clamp(inputs.employmentIncome);
   const selfEmploymentIncome = clamp(inputs.selfEmploymentIncome);
   const otherIncome = clamp(inputs.otherIncome);
@@ -183,7 +184,6 @@ const calculateTax = (inputs) => {
   const residualTax = Math.max(0, totalIncomeTax + totalCgt - reliefUsed);
 
   return {
-    config: CONFIG,
     inputs: {
       employmentIncome,
       selfEmploymentIncome,
@@ -195,7 +195,7 @@ const calculateTax = (inputs) => {
       scottishResident: Boolean(inputs.scottishResident),
       eisInvestment: clamp(inputs.eisInvestment),
       seisInvestment: clamp(inputs.seisInvestment),
-      vctInvestment: clamp(inputs.vctInvestment),
+      vctInvestment: clamp(inputs.vctInvestment)
     },
     totals: {
       adjustedNetIncome,
@@ -209,7 +209,7 @@ const calculateTax = (inputs) => {
       baselineTax: totalIncomeTax + totalCgt,
       reliefUsed,
       reliefUnused,
-      residualTax,
+      residualTax
     },
     reliefs: {
       eisQualifying,
@@ -218,9 +218,7 @@ const calculateTax = (inputs) => {
       eisRelief,
       seisRelief,
       vctRelief,
-      totalReliefPotential,
-    },
+      totalReliefPotential
+    }
   };
 };
-
-export { CONFIG, calculateTax };

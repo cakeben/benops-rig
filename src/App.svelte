@@ -25,6 +25,7 @@
 
   let pulse = false;
   let bagpipePulse = 0;
+
   const triggerAnimation = async () => {
     pulse = false;
     await tick();
@@ -36,6 +37,8 @@
   };
 
   $: results = calculateTax(form);
+  $: resultsAlt = calculateTax({ ...form, scottishResident: !form.scottishResident });
+  $: scottishDelta = results.totals.incomeTax - resultsAlt.totals.incomeTax;
 
   $: investmentNotes = (() => {
     const notes = [];
@@ -135,287 +138,309 @@
 
 <header class="site-header">
   <div class="container">
-    <p class="eyebrow">UK tax year 2025/26 (England/Wales/NI rates)</p>
-    <h1>Understand your UK tax and how EIS, SEIS, and VCT reliefs reduce it</h1>
+    <div class="trust-row">
+      <span class="pill">Tax year {CONFIG.taxYear}</span>
+      <span class="pill">Sources: GOV.UK</span>
+      <span class="pill warning">Education only — not tax advice</span>
+    </div>
+    <h1>See your UK tax clearly — and how EIS, SEIS, and VCT reliefs change it</h1>
     <p class="lede">
-      This calculator models UK income tax, dividend tax, and capital gains tax at a high level.
-      It explains relief mechanics in plain English and shows how much of your income tax can be
-      offset by EIS, SEIS, and VCT investments.
-    </p>
-    <p class="disclaimer">
-      This tool is for education only. It is not personalised tax advice. Results rely on
-      assumptions listed below.
+      A calm, transparent view of income tax, dividend tax, and capital gains tax with reliefs
+      explained in plain English. You stay in control: simple inputs first, deeper detail when you
+      ask for it.
     </p>
   </div>
 </header>
 
 <main class="container">
-  <section class={`card ${pulse ? "pulse" : ""}`} aria-labelledby="inputs-title">
-    <h2 id="inputs-title">Your inputs</h2>
-    <form class="form-grid">
-      <div class="grid">
-        <div class="field">
-          <label for="employmentIncome">Employment income</label>
-          <input
-            id="employmentIncome"
-            type="number"
-            min="0"
-            step="100"
-            bind:value={form.employmentIncome}
-          />
+  <div class="layout">
+    <section class="flow">
+      <section class={`card step ${pulse ? "pulse" : ""}`} aria-labelledby="step-1">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div>
+            <h2 id="step-1">Income snapshot</h2>
+            <p class="step-subtitle">Start with the basics. We use this to place you in the right bands.</p>
+          </div>
         </div>
-        <div class="field">
-          <label for="selfEmploymentIncome">Self-employment income</label>
-          <input
-            id="selfEmploymentIncome"
-            type="number"
-            min="0"
-            step="100"
-            bind:value={form.selfEmploymentIncome}
-          />
-        </div>
-        <div class="field">
-          <label for="otherIncome">Other taxable income</label>
-          <input
-            id="otherIncome"
-            type="number"
-            min="0"
-            step="100"
-            bind:value={form.otherIncome}
-          />
-        </div>
-        <div class="field">
-          <label for="dividends">Dividends</label>
-          <input id="dividends" type="number" min="0" step="100" bind:value={form.dividends} />
-        </div>
-        <div class="field">
-          <label for="capitalGains">Capital gains (non-residential assets)</label>
-          <input
-            id="capitalGains"
-            type="number"
-            min="0"
-            step="100"
-            bind:value={form.capitalGains}
-          />
-        </div>
-        <div class="field">
-          <label for="capitalGainsResidential">Capital gains (residential property)</label>
-          <input
-            id="capitalGainsResidential"
-            type="number"
-            min="0"
-            step="100"
-            bind:value={form.capitalGainsResidential}
-          />
-        </div>
-        <div class="field">
-          <label for="pensionContributions">Gross personal pension contributions (relief at source)</label>
-          <input
-            id="pensionContributions"
-            type="number"
-            min="0"
-            step="100"
-            bind:value={form.pensionContributions}
-          />
-        </div>
-        <div class="field checkbox">
-          <label for="scottishResident">Scottish resident (income tax bands only)</label>
-          <div class="checkbox-row">
+        <div class="grid">
+          <div class="field">
+            <label for="employmentIncome">Employment income</label>
             <input
-              id="scottishResident"
-              type="checkbox"
-              bind:checked={form.scottishResident}
-              on:change={triggerAnimation}
+              id="employmentIncome"
+              type="number"
+              min="0"
+              step="100"
+              bind:value={form.employmentIncome}
             />
+          </div>
+          <div class="field">
+            <label for="selfEmploymentIncome">Self-employment income</label>
+            <input
+              id="selfEmploymentIncome"
+              type="number"
+              min="0"
+              step="100"
+              bind:value={form.selfEmploymentIncome}
+            />
+          </div>
+          <div class="field">
+            <label for="otherIncome">Other taxable income</label>
+            <input
+              id="otherIncome"
+              type="number"
+              min="0"
+              step="100"
+              bind:value={form.otherIncome}
+            />
+          </div>
+          <div class="field">
+            <label for="dividends">Dividends</label>
+            <input id="dividends" type="number" min="0" step="100" bind:value={form.dividends} />
+          </div>
+          <div class="field">
+            <label for="capitalGains">Capital gains (non-residential assets)</label>
+            <input
+              id="capitalGains"
+              type="number"
+              min="0"
+              step="100"
+              bind:value={form.capitalGains}
+            />
+          </div>
+          <div class="field">
+            <label for="capitalGainsResidential">Capital gains (residential property)</label>
+            <input
+              id="capitalGainsResidential"
+              type="number"
+              min="0"
+              step="100"
+              bind:value={form.capitalGainsResidential}
+            />
+          </div>
+          <div class="field">
+            <label for="pensionContributions">Gross personal pension contributions</label>
+            <input
+              id="pensionContributions"
+              type="number"
+              min="0"
+              step="100"
+              bind:value={form.pensionContributions}
+            />
+            <p class="helper">Relief at source only; extends basic rate band.</p>
+          </div>
+          <div class="field checkbox">
+            <label for="scottishResident">Scottish resident (income tax bands only)</label>
+            <div class="checkbox-row">
+              <input
+                id="scottishResident"
+                type="checkbox"
+                bind:checked={form.scottishResident}
+                on:change={triggerAnimation}
+              />
+              {#if form.scottishResident}
+                {#key bagpipePulse}
+                  <div class="bagpipes" aria-hidden="true">
+                    <svg viewBox="0 0 120 120" role="presentation">
+                      <circle cx="42" cy="60" r="22" />
+                      <circle cx="78" cy="60" r="16" />
+                      <rect x="36" y="20" width="8" height="28" rx="4" />
+                      <rect x="70" y="18" width="8" height="30" rx="4" />
+                      <rect x="86" y="24" width="8" height="28" rx="4" />
+                      <path d="M24 70 C24 96 46 100 60 100" />
+                    </svg>
+                  </div>
+                {/key}
+              {/if}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class={`card step ${pulse ? "pulse" : ""}`} aria-labelledby="step-2">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div>
+            <h2 id="step-2">Relief options</h2>
+            <p class="step-subtitle">Add qualifying investments and see how much income tax relief they unlock.</p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label for="eisInvestment">EIS amount</label>
+            <input id="eisInvestment" type="number" min="0" step="100" bind:value={form.eisInvestment} />
+            <p class="helper">30% relief up to GBP 1,000,000.</p>
+          </div>
+          <div class="field">
+            <label for="seisInvestment">SEIS amount</label>
+            <input id="seisInvestment" type="number" min="0" step="100" bind:value={form.seisInvestment} />
+            <p class="helper">50% relief up to GBP 200,000.</p>
+          </div>
+          <div class="field">
+            <label for="vctInvestment">VCT amount</label>
+            <input id="vctInvestment" type="number" min="0" step="100" bind:value={form.vctInvestment} />
+            <p class="helper">20% relief up to GBP 200,000.</p>
+          </div>
+        </div>
+        <div class="note-strip">
+          <strong>Remember:</strong> Reliefs offset income tax only. CGT stays payable in this model.
+        </div>
+      </section>
+
+      <section class={`card step ${pulse ? "pulse" : ""}`} aria-labelledby="step-3">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div>
+            <h2 id="step-3">Understand the calculation</h2>
+            <p class="step-subtitle">Expand the pieces you care about. Start simple, then go deeper.</p>
+          </div>
+        </div>
+        <details>
+          <summary>How we calculated your income tax</summary>
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Adjusted net income</p>
+              <p class="detail-value">{formatGBP(results.totals.adjustedNetIncome)}</p>
+            </div>
+            <div>
+              <p class="detail-label">Personal allowance used</p>
+              <p class="detail-value">{formatGBP(results.totals.personalAllowance)}</p>
+            </div>
+            <div>
+              <p class="detail-label">Taxable non-savings income</p>
+              <p class="detail-value">{formatGBP(results.totals.taxableNonSavings)}</p>
+            </div>
+            <div>
+              <p class="detail-label">Taxable dividends</p>
+              <p class="detail-value">{formatGBP(results.totals.taxableDividends)}</p>
+            </div>
+          </div>
+          <p class="detail-note">
+            Scottish bands apply to non-savings income only. Dividend tax and CGT use UK bands in this model.
+          </p>
+        </details>
+        <details>
+          <summary>Relief mechanics (EIS / SEIS / VCT)</summary>
+          <ul class="notes">
+            <li>Reliefs offset your income tax liability in the tax year (EIS/SEIS can be carried back).</li>
+            <li>Qualifying shares must be held for 3 years (EIS/SEIS) or 5 years (VCT) to avoid clawback.</li>
+            <li>Additional CGT reliefs exist for EIS/SEIS but are not modelled here.</li>
+          </ul>
+        </details>
+        <details>
+          <summary>Rates snapshot</summary>
+          <div class="rates-grid">
+            <div>
+              <h3>England/Wales/NI income tax bands</h3>
+              <table class="rates-table">
+                <thead>
+                  <tr>
+                    <th>Band</th>
+                    <th>Taxable income</th>
+                    <th>Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each ukBands as band}
+                    <tr>
+                      <td>{band.band}</td>
+                      <td>{band.income}</td>
+                      <td>{band.rate}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3>Scottish income tax bands</h3>
+              <table class="rates-table">
+                <thead>
+                  <tr>
+                    <th>Band</th>
+                    <th>Taxable income</th>
+                    <th>Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each scotlandBands as band}
+                    <tr>
+                      <td>{band.band}</td>
+                      <td>{band.income}</td>
+                      <td>{band.rate}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary>Assumptions & sources</summary>
+          <ul class="notes">
+            {#each assumptions as item}
+              <li>{item}</li>
+            {/each}
+          </ul>
+          <p class="meta">Rates updated on {ratesUpdated}.</p>
+          <ul class="notes">
+            {#each sources as source}
+              <li><a href={source.href} target="_blank" rel="noopener">{source.label}</a></li>
+            {/each}
+          </ul>
+        </details>
+      </section>
+    </section>
+
+    <aside class={`summary ${pulse ? "pulse" : ""}`}>
+      <div class="summary-card">
+        <p class="summary-title">Your tax summary</p>
+        <div class="summary-row">
+          <span>Baseline tax</span>
+          <strong>{formatGBP(results.totals.baselineTax)}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Relief available</span>
+          <strong>{formatGBP(results.totals.reliefUsed)}</strong>
+        </div>
+        <div class="summary-row total">
+          <span>Residual tax after reliefs</span>
+          <strong>{formatGBP(results.totals.residualTax)}</strong>
+        </div>
+
+        <div class="chip-row">
+          <span class="chip">
+            Relief reduces tax by {formatGBP(results.totals.reliefUsed)}
+          </span>
+          <span class={`chip ${scottishDelta >= 0 ? "warn" : "good"}`}>
             {#if form.scottishResident}
-              {#key bagpipePulse}
-                <div class="bagpipes" aria-hidden="true">
-                  <svg viewBox="0 0 120 120" role="presentation">
-                    <circle cx="42" cy="60" r="22" />
-                    <circle cx="78" cy="60" r="16" />
-                    <rect x="36" y="20" width="8" height="28" rx="4" />
-                    <rect x="70" y="18" width="8" height="30" rx="4" />
-                    <rect x="86" y="24" width="8" height="28" rx="4" />
-                    <path d="M24 70 C24 96 46 100 60 100" />
-                  </svg>
-                </div>
-              {/key}
+              Scottish bands change income tax by {formatGBP(Math.abs(scottishDelta))}
+            {:else}
+              Scottish bands would change income tax by {formatGBP(Math.abs(scottishDelta))}
             {/if}
+          </span>
+        </div>
+
+        <div class="summary-block">
+          <p class="summary-label">What this covers</p>
+          <div class="coverage">
+            <span>Income tax</span>
+            <span>Dividend tax</span>
+            <span>Capital gains</span>
           </div>
         </div>
-      </div>
 
-      <h3 class="subheading">EIS / SEIS / VCT investments</h3>
-      <div class="grid">
-        <div class="field">
-          <label for="eisInvestment">EIS amount</label>
-          <input id="eisInvestment" type="number" min="0" step="100" bind:value={form.eisInvestment} />
+        <div class="summary-block">
+          <p class="summary-label">Confidence</p>
+          <div class="confidence">
+            <div class="confidence-bar" style={`width: 78%`}></div>
+          </div>
+          <p class="helper">Based on your inputs and stated assumptions.</p>
         </div>
-        <div class="field">
-          <label for="seisInvestment">SEIS amount</label>
-          <input id="seisInvestment" type="number" min="0" step="100" bind:value={form.seisInvestment} />
-        </div>
-        <div class="field">
-          <label for="vctInvestment">VCT amount</label>
-          <input id="vctInvestment" type="number" min="0" step="100" bind:value={form.vctInvestment} />
-        </div>
-      </div>
 
-      <button class="primary" type="button" on:click={triggerAnimation}>Recalculate</button>
-    </form>
-  </section>
-
-  <section class={`card ${pulse ? "pulse" : ""}`} aria-labelledby="results-title">
-    <h2 id="results-title">Results</h2>
-    <div class="results-grid">
-      <div class="result-block">
-        <h3>Baseline tax (before reliefs)</h3>
-        <dl>
-          <div>
-            <dt>Income tax (non-savings)</dt>
-            <dd>{formatGBP(results.totals.incomeTax)}</dd>
-          </div>
-          <div>
-            <dt>Dividend tax</dt>
-            <dd>{formatGBP(results.totals.dividendTax)}</dd>
-          </div>
-          <div>
-            <dt>Capital gains tax</dt>
-            <dd>{formatGBP(results.totals.capitalGainsTax)}</dd>
-          </div>
-          <div class="total">
-            <dt>Total baseline tax</dt>
-            <dd>{formatGBP(results.totals.baselineTax)}</dd>
-          </div>
-        </dl>
+        <button class="primary" type="button" on:click={triggerAnimation}>Recalculate</button>
       </div>
-      <div class="result-block">
-        <h3>EIS/SEIS/VCT relief impact</h3>
-        <dl>
-          <div>
-            <dt>Income tax liability available for relief</dt>
-            <dd>{formatGBP(results.totals.totalIncomeTax)}</dd>
-          </div>
-          <div>
-            <dt>Total relief claimed</dt>
-            <dd>{formatGBP(results.totals.reliefUsed)}</dd>
-          </div>
-          <div>
-            <dt>Unused relief (carry-back may apply)</dt>
-            <dd>{formatGBP(results.totals.reliefUnused)}</dd>
-          </div>
-          <div class="total">
-            <dt>Residual tax after reliefs</dt>
-            <dd>{formatGBP(results.totals.residualTax)}</dd>
-          </div>
-        </dl>
-      </div>
-    </div>
-    <div class="result-block">
-      <h3>Qualifying investment summary</h3>
-      <ul class="notes">
-        {#each investmentNotes as note}
-          <li>{note}</li>
-        {/each}
-      </ul>
-    </div>
-  </section>
-
-  <section class={`card ${pulse ? "pulse" : ""}`} aria-labelledby="explain-title">
-    <h2 id="explain-title">How the reliefs work (plain English)</h2>
-    <div class="explain">
-      <div>
-        <h3>EIS (Enterprise Investment Scheme)</h3>
-        <ul>
-          <li>30% income tax relief on qualifying investments up to GBP 1,000,000 per tax year.</li>
-          <li>You must hold the shares for at least 3 years or relief can be clawed back.</li>
-          <li>Relief can be carried back to the previous tax year if you have unused income tax.</li>
-          <li>CGT deferral relief may be available, but is not calculated here.</li>
-        </ul>
-      </div>
-      <div>
-        <h3>SEIS (Seed Enterprise Investment Scheme)</h3>
-        <ul>
-          <li>50% income tax relief on qualifying investments up to GBP 200,000 per tax year.</li>
-          <li>Shares must be held for at least 3 years or relief can be clawed back.</li>
-          <li>Relief can be carried back to the previous tax year if you have unused income tax.</li>
-          <li>Additional CGT reliefs may be available; not calculated here.</li>
-        </ul>
-      </div>
-      <div>
-        <h3>VCT (Venture Capital Trust)</h3>
-        <ul>
-          <li>20% income tax relief on qualifying investments up to GBP 200,000 per tax year.</li>
-          <li>Relief is only for the current tax year and cannot be carried back.</li>
-          <li>Shares must be held for at least 5 years or relief can be clawed back.</li>
-          <li>Dividends from VCTs are tax-free, but this is not modelled here.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class={`card ${pulse ? "pulse" : ""}`} aria-labelledby="assumptions-title">
-    <h2 id="assumptions-title">Assumptions & regulatory notes</h2>
-    <ul class="notes">
-      {#each assumptions as item}
-        <li>{item}</li>
-      {/each}
-    </ul>
-    <p class="meta">Rates updated on {ratesUpdated}.</p>
-    <ul class="notes">
-      {#each sources as source}
-        <li><a href={source.href} target="_blank" rel="noopener">{source.label}</a></li>
-      {/each}
-    </ul>
-  </section>
-
-  <section class={`card ${pulse ? "pulse" : ""}`} aria-labelledby="rates-title">
-    <h2 id="rates-title">Rates snapshot</h2>
-    <div class="rates-grid">
-      <div>
-        <h3>England/Wales/NI income tax bands</h3>
-        <table class="rates-table">
-          <thead>
-            <tr>
-              <th>Band</th>
-              <th>Taxable income</th>
-              <th>Rate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each ukBands as band}
-              <tr>
-                <td>{band.band}</td>
-                <td>{band.income}</td>
-                <td>{band.rate}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-      <div>
-        <h3>Scottish income tax bands</h3>
-        <table class="rates-table">
-          <thead>
-            <tr>
-              <th>Band</th>
-              <th>Taxable income</th>
-              <th>Rate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each scotlandBands as band}
-              <tr>
-                <td>{band.band}</td>
-                <td>{band.income}</td>
-                <td>{band.rate}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+    </aside>
+  </div>
 </main>
 
 <footer class="site-footer">

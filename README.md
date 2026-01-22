@@ -6,6 +6,10 @@ UK-focused tax calculator prototype.
 
 Open `index.html` in a browser (no build step required).
 
+## GitHub Pages
+
+This repo deploys automatically on every commit to `main` via GitHub Actions.
+
 ## Tests
 
 ```bash

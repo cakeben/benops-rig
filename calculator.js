@@ -1,5 +1,5 @@
 const CONFIG = {
-  taxYear: "2024/25",
+  taxYear: "2025/26",
   personalAllowance: 12570,
   personalAllowanceTaperStart: 100000,
   personalAllowanceZeroAt: 125140,
@@ -37,7 +37,7 @@ const CONFIG = {
   reliefRates: {
     eis: 0.3,
     seis: 0.5,
-    vct: 0.3,
+    vct: 0.2,
   },
 };
 

@@ -45,6 +45,7 @@ const renderAssumptions = () => {
     "Dividend allowance is GBP 500 and applied after personal allowance offsets dividends.",
     "Capital gains annual exempt amount is GBP 3,000 and is applied to non-residential gains first.",
     "EIS/SEIS/VCT reliefs are applied only against income tax liability; unused relief is shown but not carried back here.",
+    "VCT relief rate assumed at 20% for 2025/26; confirm with current HMRC rules.",
   ];
   list.innerHTML = items.map((item) => `<li>${item}</li>`).join("");
 };

@@ -56,8 +56,8 @@ const near = (actual, expected, tolerance = 1) => {
     vctInvestment: 0,
   });
 
-  // CGT: gains 20k - 3k allowance = 17k at 10% (basic band unused) => 1.7k.
-  near(result.totals.capitalGainsTax, 1700, 1);
+  // CGT: gains 20k - 3k allowance = 17k at 18% (basic band unused) => 3.06k.
+  near(result.totals.capitalGainsTax, 3060, 1);
 }
 
 console.log("calculator tests passed");

@@ -20,12 +20,12 @@ const CONFIG = {
     },
     cgt: {
       nonResidential: {
-        basic: 0.1,
-        higher: 0.2,
+        basic: 0.18,
+        higher: 0.24,
       },
       residential: {
         basic: 0.18,
-        higher: 0.28,
+        higher: 0.24,
       },
     },
   },

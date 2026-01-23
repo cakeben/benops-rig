@@ -1,7 +1,7 @@
 <script>
   import { CONFIG, calculateTax } from "./lib/calculator.js";
   import BandPanel from "./components/BandPanel.svelte";
-  import InfoTip from "./components/InfoTip.svelte";
+  import InfoTooltip from "./components/InfoTooltip.svelte";
 
   const formatGBP = (value) =>
     new Intl.NumberFormat("en-GB", {
@@ -28,6 +28,7 @@
   const goTo = (next) => {
     view = next;
   };
+  const tooltipRegistry = { active: null };
 
   const bandNote =
     "Band classification is simplified (standard allowances, no savings interest). It is deterministic and updates as inputs change.";
@@ -447,11 +448,11 @@
             <div class="field">
             <label for="employmentIncome">
               Employment income
-              <InfoTip label="Employment income guidance">
-                <p><strong>Enter:</strong> your gross taxable pay from employment (before tax), for the tax year.</p>
-                <p><strong>Do not enter:</strong> dividends, self-employed profits, or limited company profits.</p>
-                <p><strong>Example:</strong> You were paid GBP 42,000 in salary/PAYE this year → enter 42,000.</p>
-              </InfoTip>
+              <InfoTooltip id="employment-income" label="Explain employment income" registry={tooltipRegistry}>
+                <p><strong>Enter:</strong> your gross taxable pay from employment for the tax year.</p>
+                <p><strong>Do not enter:</strong> dividends or self-employed profits.</p>
+                <p><strong>Example:</strong> Salary/PAYE of GBP 42,000 → enter 42,000.</p>
+              </InfoTooltip>
             </label>
               <input
                 id="employmentIncome"
@@ -467,11 +468,11 @@
             <div class="field">
             <label for="selfEmploymentIncome">
               Self-employment income
-              <InfoTip label="Self-employment income guidance">
-                <p><strong>Enter:</strong> your taxable profit as a sole trader or partner (after allowable expenses).</p>
-                <p><strong>Do not enter:</strong> limited company salary or dividends. Those go in Employment or Dividends.</p>
-                <p><strong>Example:</strong> Sole trader profit GBP 18,500 after expenses → enter 18,500.</p>
-              </InfoTip>
+              <InfoTooltip id="self-employment-income" label="Explain self-employment income" registry={tooltipRegistry}>
+                <p><strong>Enter:</strong> taxable profit for sole traders/partnerships (after allowable expenses).</p>
+                <p><strong>Do not enter:</strong> limited company salary or dividends.</p>
+                <p><strong>Example:</strong> Sole trader profit GBP 18,500 → enter 18,500.</p>
+              </InfoTooltip>
             </label>
               <input
                 id="selfEmploymentIncome"
@@ -500,11 +501,11 @@
             <div class="field">
             <label for="dividends">
               Dividends
-              <InfoTip label="Dividend income guidance">
-                <p><strong>Enter:</strong> dividends received from UK companies, including your own limited company.</p>
-                <p><strong>Do not enter:</strong> salary, interest, or capital gains. Do not enter share sale proceeds.</p>
-                <p><strong>Example:</strong> You took GBP 8,000 in dividends from your Ltd → enter 8,000.</p>
-              </InfoTip>
+              <InfoTooltip id="dividend-income" label="Explain dividend income" registry={tooltipRegistry}>
+                <p><strong>Enter:</strong> dividends received, including from your own limited company.</p>
+                <p><strong>Do not enter:</strong> salary, interest, or share sale proceeds.</p>
+                <p><strong>Example:</strong> Dividends of GBP 8,000 from your Ltd → enter 8,000.</p>
+              </InfoTooltip>
             </label>
               <input id="dividends" type="number" min="0" step="100" bind:value={form.dividends} />
               {#if fieldErrors.dividends}
@@ -514,11 +515,11 @@
             <div class="field">
             <label for="capitalGains">
               Capital gains (non-residential assets)
-              <InfoTip label="Capital gains guidance">
+              <InfoTooltip id="capital-gains" label="Explain capital gains" registry={tooltipRegistry}>
                 <p><strong>Enter:</strong> taxable gain (sale price minus costs and allowable losses).</p>
                 <p><strong>Do not enter:</strong> the full sale price or gross proceeds.</p>
                 <p><strong>Example:</strong> Shares sold for GBP 30,000, cost GBP 20,000 → gain GBP 10,000.</p>
-              </InfoTip>
+              </InfoTooltip>
             </label>
               <input
                 id="capitalGains"
@@ -547,11 +548,11 @@
             <div class="field">
             <label for="pensionContributions">
               Gross personal pension contributions
-              <InfoTip label="Pension contributions guidance">
+              <InfoTooltip id="pension-contributions" label="Explain pension contributions" registry={tooltipRegistry}>
                 <p><strong>Enter:</strong> gross personal contributions (relief at source) for the year.</p>
-                <p><strong>Do not enter:</strong> employer contributions or contributions already deducted via salary sacrifice.</p>
-                <p><strong>Example:</strong> You paid GBP 8,000 net and provider added GBP 2,000 → enter 10,000.</p>
-              </InfoTip>
+                <p><strong>Do not enter:</strong> employer contributions or salary sacrifice amounts.</p>
+                <p><strong>Example:</strong> Paid GBP 8,000 net and provider added GBP 2,000 → enter 10,000.</p>
+              </InfoTooltip>
             </label>
               <input
                 id="pensionContributions"

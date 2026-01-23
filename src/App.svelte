@@ -1,5 +1,4 @@
 <script>
-  import { tick } from "svelte";
   import { CONFIG, calculateTax } from "./lib/calculator.js";
 
   const formatGBP = (value) =>
@@ -21,19 +20,6 @@
     eisInvestment: 0,
     seisInvestment: 0,
     vctInvestment: 0
-  };
-
-  let pulse = false;
-  let bagpipePulse = 0;
-
-  const triggerAnimation = async () => {
-    pulse = false;
-    await tick();
-    pulse = true;
-    bagpipePulse += 1;
-    setTimeout(() => {
-      pulse = false;
-    }, 450);
   };
 
   $: results = calculateTax(form);
@@ -134,8 +120,6 @@
   const ratesUpdated = "2026-01-22";
 </script>
 
-<svelte:window on:click={triggerAnimation} />
-
 <header class="site-header">
   <div class="container">
     <div class="trust-row">
@@ -155,7 +139,7 @@
 <main class="container">
   <div class="layout">
     <section class="flow">
-      <section class={`card step ${pulse ? "pulse" : ""}`} aria-labelledby="step-1">
+      <section class="card step" aria-labelledby="step-1">
         <div class="step-header">
           <div class="step-number">1</div>
           <div>
@@ -236,28 +220,13 @@
                 id="scottishResident"
                 type="checkbox"
                 bind:checked={form.scottishResident}
-                on:change={triggerAnimation}
               />
-              {#if form.scottishResident}
-                {#key bagpipePulse}
-                  <div class="bagpipes" aria-hidden="true">
-                    <svg viewBox="0 0 120 120" role="presentation">
-                      <circle cx="42" cy="60" r="22" />
-                      <circle cx="78" cy="60" r="16" />
-                      <rect x="36" y="20" width="8" height="28" rx="4" />
-                      <rect x="70" y="18" width="8" height="30" rx="4" />
-                      <rect x="86" y="24" width="8" height="28" rx="4" />
-                      <path d="M24 70 C24 96 46 100 60 100" />
-                    </svg>
-                  </div>
-                {/key}
-              {/if}
             </div>
           </div>
         </div>
       </section>
 
-      <section class={`card step ${pulse ? "pulse" : ""}`} aria-labelledby="step-2">
+      <section class="card step" aria-labelledby="step-2">
         <div class="step-header">
           <div class="step-number">2</div>
           <div>
@@ -287,7 +256,7 @@
         </div>
       </section>
 
-      <section class={`card step ${pulse ? "pulse" : ""}`} aria-labelledby="step-3">
+      <section class="card step" aria-labelledby="step-3">
         <div class="step-header">
           <div class="step-number">3</div>
           <div>
@@ -391,7 +360,7 @@
       </section>
     </section>
 
-    <aside class={`summary ${pulse ? "pulse" : ""}`}>
+    <aside class="summary">
       <div class="summary-card">
         <p class="summary-title">Your tax summary</p>
         <div class="summary-row">
@@ -437,7 +406,7 @@
           <p class="helper">Based on your inputs and stated assumptions.</p>
         </div>
 
-        <button class="primary" type="button" on:click={triggerAnimation}>Recalculate</button>
+        <button class="primary" type="button">Recalculate</button>
       </div>
     </aside>
   </div>

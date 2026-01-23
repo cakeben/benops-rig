@@ -104,25 +104,6 @@ main {
   box-shadow: 0 18px 45px rgba(31, 27, 22, 0.08);
 }
 
-.card.pulse,
-.summary.pulse {
-  animation: pulse 0.45s ease;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 18px 45px rgba(31, 27, 22, 0.08);
-  }
-  50% {
-    transform: scale(1.01);
-    box-shadow: 0 24px 55px rgba(31, 27, 22, 0.12);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 18px 45px rgba(31, 27, 22, 0.08);
-  }
-}
 
 .step-header {
   display: flex;
@@ -421,39 +402,6 @@ summary::marker {
   cursor: pointer;
 }
 
-.bagpipes {
-  display: inline-flex;
-  width: 56px;
-  height: 56px;
-  align-items: center;
-  justify-content: center;
-  background: #f6ead2;
-  border-radius: 14px;
-  border: 1px solid #e5d4b6;
-  animation: bagpipe-sway 0.8s ease-in-out infinite;
-}
-
-.bagpipes svg {
-  width: 42px;
-  height: 42px;
-  fill: none;
-  stroke: #6b4a1c;
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-@keyframes bagpipe-sway {
-  0% {
-    transform: rotate(-2deg);
-  }
-  50% {
-    transform: rotate(3deg) scale(1.04);
-  }
-  100% {
-    transform: rotate(-2deg);
-  }
-}
 
 .site-footer {
   padding: 2rem 0 3rem;

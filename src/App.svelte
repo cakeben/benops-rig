@@ -64,8 +64,8 @@
     };
   };
 
-  const buildIncomeBands = () => {
-    const taxableIncome = results.totals.taxableNonSavings;
+  const buildIncomeBands = (currentResults) => {
+    const taxableIncome = currentResults.totals.taxableNonSavings;
     const pension = Number(form.pensionContributions) || 0;
     if (taxableIncome <= 0) {
       return {
@@ -111,7 +111,7 @@
         title: "Income tax bands (Scotland)",
         entries,
         effectiveRate: formatPercent(
-          taxableIncome > 0 ? results.totals.incomeTax / taxableIncome : 0
+          taxableIncome > 0 ? currentResults.totals.incomeTax / taxableIncome : 0
         ),
         why: `Your taxable income after allowances is ${formatGBP(
           taxableIncome
@@ -163,7 +163,7 @@
       title: "Income tax bands (UK)",
       entries,
       effectiveRate: formatPercent(
-        taxableIncome > 0 ? results.totals.incomeTax / taxableIncome : 0
+      taxableIncome > 0 ? currentResults.totals.incomeTax / taxableIncome : 0
       ),
       why: `Your taxable income after allowances is ${formatGBP(
         taxableIncome
@@ -176,8 +176,8 @@
     };
   };
 
-  const buildDividendBands = () => {
-    const taxableDividends = results.totals.taxableDividends;
+  const buildDividendBands = (currentResults) => {
+    const taxableDividends = currentResults.totals.taxableDividends;
     const pension = Number(form.pensionContributions) || 0;
     if (taxableDividends <= 0) {
       return {
@@ -188,9 +188,9 @@
 
     const basicBand = CONFIG.basicRateBand + pension;
     const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
-    const basicUsedByIncome = Math.min(results.totals.taxableNonSavings, basicBand);
+    const basicUsedByIncome = Math.min(currentResults.totals.taxableNonSavings, basicBand);
     const higherUsedByIncome = Math.min(
-      Math.max(0, results.totals.taxableNonSavings - basicBand),
+      Math.max(0, currentResults.totals.taxableNonSavings - basicBand),
       Math.max(0, higherBandLimit)
     );
     let basicRemaining = Math.max(0, basicBand - basicUsedByIncome);
@@ -231,7 +231,7 @@
       title: "Dividend tax bands",
       entries,
       effectiveRate: formatPercent(
-        taxableDividends > 0 ? results.totals.dividendTax / taxableDividends : 0
+        taxableDividends > 0 ? currentResults.totals.dividendTax / taxableDividends : 0
       ),
       why: `Your taxable dividends are ${formatGBP(
         taxableDividends
@@ -244,7 +244,7 @@
     };
   };
 
-  const buildCgtBands = () => {
+  const buildCgtBands = (currentResults) => {
     const pension = Number(form.pensionContributions) || 0;
     const gains = Number(form.capitalGains) || 0;
     const residentialGains = Number(form.capitalGainsResidential) || 0;
@@ -261,7 +261,8 @@
     }
 
     const basicBand = CONFIG.basicRateBand + pension;
-    const taxableIncomeForCgt = results.totals.taxableNonSavings + results.totals.taxableDividends;
+    const taxableIncomeForCgt =
+      currentResults.totals.taxableNonSavings + currentResults.totals.taxableDividends;
     let basicRemaining = Math.max(0, basicBand - taxableIncomeForCgt);
 
     const nonResBand = applyBand(nonResAfter, basicRemaining);
@@ -293,7 +294,7 @@
       title: "Capital gains tax bands",
       entries,
       effectiveRate: formatPercent(
-        taxableGains > 0 ? results.totals.capitalGainsTax / taxableGains : 0
+        taxableGains > 0 ? currentResults.totals.capitalGainsTax / taxableGains : 0
       ),
       why: `Your taxable gains are ${formatGBP(
         taxableGains
@@ -306,7 +307,9 @@
     };
   };
 
-  $: bandPanels = [buildIncomeBands(), buildDividendBands(), buildCgtBands()];
+  $: bandPanels = results
+    ? [buildIncomeBands(results), buildDividendBands(results), buildCgtBands(results)]
+    : [];
 
   const assumptions = [
     `Tax year modeled: ${CONFIG.taxYear}. Rates are for England/Wales/NI unless Scottish resident is selected.`,

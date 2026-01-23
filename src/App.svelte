@@ -66,6 +66,7 @@
 
   const buildIncomeBands = () => {
     const taxableIncome = results.totals.taxableNonSavings;
+    const pension = Number(form.pensionContributions) || 0;
     if (taxableIncome <= 0) {
       return {
         title: "Income tax band",
@@ -123,7 +124,7 @@
       };
     }
 
-    const basicBand = CONFIG.basicRateBand + form.pensionContributions;
+    const basicBand = CONFIG.basicRateBand + pension;
     const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
     const basicUsed = Math.min(taxableIncome, basicBand);
     const higherUsed = Math.min(
@@ -177,6 +178,7 @@
 
   const buildDividendBands = () => {
     const taxableDividends = results.totals.taxableDividends;
+    const pension = Number(form.pensionContributions) || 0;
     if (taxableDividends <= 0) {
       return {
         title: "Dividend tax bands",
@@ -184,7 +186,7 @@
       };
     }
 
-    const basicBand = CONFIG.basicRateBand + form.pensionContributions;
+    const basicBand = CONFIG.basicRateBand + pension;
     const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
     const basicUsedByIncome = Math.min(results.totals.taxableNonSavings, basicBand);
     const higherUsedByIncome = Math.min(
@@ -243,9 +245,12 @@
   };
 
   const buildCgtBands = () => {
-    const aeaRemaining = Math.max(0, CONFIG.cgtAnnualExempt - form.capitalGains);
-    const nonResAfter = Math.max(0, form.capitalGains - CONFIG.cgtAnnualExempt);
-    const resAfter = Math.max(0, form.capitalGainsResidential - aeaRemaining);
+    const pension = Number(form.pensionContributions) || 0;
+    const gains = Number(form.capitalGains) || 0;
+    const residentialGains = Number(form.capitalGainsResidential) || 0;
+    const aeaRemaining = Math.max(0, CONFIG.cgtAnnualExempt - gains);
+    const nonResAfter = Math.max(0, gains - CONFIG.cgtAnnualExempt);
+    const resAfter = Math.max(0, residentialGains - aeaRemaining);
     const taxableGains = nonResAfter + resAfter;
 
     if (taxableGains <= 0) {
@@ -255,7 +260,7 @@
       };
     }
 
-    const basicBand = CONFIG.basicRateBand + form.pensionContributions;
+    const basicBand = CONFIG.basicRateBand + pension;
     const taxableIncomeForCgt = results.totals.taxableNonSavings + results.totals.taxableDividends;
     let basicRemaining = Math.max(0, basicBand - taxableIncomeForCgt);
 

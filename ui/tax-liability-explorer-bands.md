@@ -1,34 +1,35 @@
 # UI Concept: Tax Liability Explorer (Band Clarity)
 
 ## Purpose
-Deliver a calm, regulated UI that helps non-experts understand their UK tax position and how EIS, SEIS, and VCT reliefs reduce income tax. The interface prioritizes clarity, transparent assumptions, and explicit tax band classification.
+Give non-experts a calm, regulated view of their UK tax position and how EIS, SEIS, and VCT reliefs reduce income tax. The UI prioritizes clear language, visible assumptions, and explicit band classification that updates as inputs change.
 
 ## Primary User Journey (Landing → Input → Results)
 1. Landing
-   - Clear scope statement, tax year, and “educational only” disclaimer.
-   - Trust signals: sources, last-updated date, what is and is not covered.
+   - Statement of scope: “This tool estimates UK income, dividend, and capital gains tax for 2025/26.”
+   - Disclaimer: “Educational only — not personal tax advice.”
+   - Trust cues: sources list, last-updated date, and coverage summary (what is included and excluded).
 2. Input (Baseline)
-   - Minimal grouped inputs for income, dividends, gains, and pension contributions.
-   - Tax summary updates as the user enters data, including band placement and effective tax rate.
+   - Grouped inputs with short helper text: income, dividends, gains, pension contributions.
+   - A live tax summary shows band placement and effective tax rate as the user types.
 3. Relief Scenarios
-   - EIS/SEIS/VCT inputs with limits and plain-English eligibility notes.
-   - “Relief impact” summary showing relief applied vs. unused relief.
+   - EIS/SEIS/VCT inputs with caps shown inline (e.g., “EIS: up to GBP 1,000,000”).
+   - Relief impact row: “Relief used” and “Unused relief (carry-back may apply).”
 4. Results
    - Headline totals: baseline tax, reliefs used, residual tax.
-   - Static “why this result” explanation with key thresholds.
+   - “Why this result” box listing the key thresholds and allowances that affected bands.
 
 ## Key Screens and Roles
 - Landing header
   - Role: establish trust, clarify tax year and scope.
 - Baseline inputs
-  - Role: capture taxable income components and show band placement.
+  - Role: capture taxable income components in a predictable order.
 - Tax summary (always visible)
   - Role: show baseline tax, relief capacity, and band classifications in one place as users type.
-  - Includes an effective tax rate for income, dividends, and CGT (clearly defined).
+  - Includes effective tax rates for income, dividends, and CGT (clearly defined).
 - Reliefs section
   - Role: let users explore EIS/SEIS/VCT effects on income tax liability.
 - Results summary
-  - Role: show baseline vs. relief-adjusted tax outcomes.
+  - Role: show baseline vs. relief-adjusted tax outcomes with short explanations.
 - Detail drawers (progressive disclosure)
   - Role: deeper explanations of bands, relief rules, and assumptions without cluttering the main flow.
 
@@ -40,17 +41,17 @@ Deliver a calm, regulated UI that helps non-experts understand their UK tax posi
   3) Capital Gains Tax Bands
 
 Each panel shows:
-- All marginal bands that apply, listed in order (e.g., “20% on GBP 37,700, 40% on GBP 14,300”).
-- Threshold ranges in plain English (e.g., “Your taxable income after allowances is GBP 52,000, spanning GBP 12,571 to GBP 50,270 and GBP 50,271 to GBP 52,000”).
-- Marginal vs. effective rate explanation:
-  - Marginal rate: rate applied to the last GBP earned.
-  - Effective rate: total tax divided by total taxable amount, shown as a single percentage in the summary.
-- A short “why this band” sentence with the relevant threshold and allowance.
-- A simple “what changes this band” list (e.g., pension contributions, additional income, Scottish residence).
+- Marginal bands listed in order with amounts (e.g., “20% on GBP 37,700; 40% on GBP 14,300”).
+- Plain-English threshold ranges (e.g., “Your taxable income after allowances is GBP 52,000, spanning GBP 12,571 to GBP 50,270 and GBP 50,271 to GBP 52,000.”).
+- A “Why this band” sentence that cites the relevant allowance and threshold.
+- A “What moves this band” list (pension contributions, additional income, Scottish residence).
+- Definitions (static, inline):
+  - Marginal rate: the rate applied to the last GBP earned.
+  - Effective rate: total tax divided by total taxable amount.
 
 Reliefs context:
-- Each band panel includes a line stating “Reliefs reduce income tax only; dividend tax and CGT bands remain unchanged in this model.”
-- Income tax band panel highlights the income tax liability available for relief.
+- Each band panel includes: “Reliefs reduce income tax only; dividend tax and CGT bands do not change in this model.”
+- Income tax panel highlights the income tax liability available for relief.
 
 ## Interaction Patterns (Static)
 - Single-page flow with a sticky summary (desktop) and stacked summary (mobile).
@@ -72,6 +73,6 @@ Reliefs context:
 - Single-page layout is approachable but may feel long for expert users.
 
 ## Open Questions
-- Do we need a separate “headline rate” summary, or is listing all marginal bands enough?
 - Should effective tax rate be shown per tax type (income/dividend/CGT) or as a combined effective rate?
-- Should relief eligibility checks be placed inline or in a dedicated “Eligibility” drawer?
+- Should relief eligibility checks sit inline with inputs or in a dedicated “Eligibility” drawer?
+- Do we need a dedicated comparison row (baseline vs. with reliefs) or keep it in the summary?

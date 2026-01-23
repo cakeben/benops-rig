@@ -46,6 +46,39 @@ h3 {
   padding: 3.5rem 0 2.5rem;
 }
 
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  font-family: "Source Serif 4", "Georgia", serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.nav-button {
+  border: 1px solid #d6c8b7;
+  background: #fff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.nav-button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .trust-row {
   display: flex;
   flex-wrap: wrap;
@@ -81,6 +114,10 @@ h1 {
 
 main {
   padding-bottom: 3rem;
+}
+
+.home-card {
+  max-width: 70ch;
 }
 
 .layout {
@@ -168,6 +205,20 @@ input[type="checkbox"] {
   height: 18px;
 }
 
+.error {
+  margin: 0.2rem 0 0;
+  color: #a03d2a;
+  font-size: 0.85rem;
+}
+
+.error-banner {
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e1b1a8;
+  background: #fdecec;
+  color: #8a2f21;
+}
+
 .helper {
   margin: 0.2rem 0 0;
   font-size: 0.85rem;
@@ -181,23 +232,6 @@ input[type="checkbox"] {
   background: #fdf4e4;
   border: 1px solid #f0ddbd;
   font-size: 0.9rem;
-}
-
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.result-block {
-  background: var(--wash);
-  border-radius: 14px;
-  padding: 1.5rem;
-  border: 1px solid #f0e5d9;
-}
-
-.result-block h3 {
-  margin-top: 0;
 }
 
 dl {
@@ -235,6 +269,107 @@ summary {
 
 summary::marker {
   color: var(--accent);
+}
+
+.band-panel-slot {
+  margin-top: 1.5rem;
+}
+
+.band-panel h3 {
+  margin: 0 0 0.5rem;
+}
+
+.panel-note {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.band-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.band-card {
+  border: 1px solid #eadfce;
+  background: #fffdf9;
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.band-card h4 {
+  margin: 0 0 0.5rem;
+}
+
+.band-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.band-label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.band-range {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.band-meta {
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+}
+
+.band-why {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+.band-changes {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.band-panel.compact .band-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.band-panel.compact .band-label,
+.band-panel.compact .band-range,
+.band-panel.compact .band-why,
+.band-panel.compact .band-changes,
+.band-panel.compact .panel-note {
+  color: #d8e6e1;
+}
+
+.band-panel.compact .band-card h4,
+.band-panel.compact .band-meta,
+.band-panel.compact .band-list {
+  color: #fdf7ee;
+}
+
+.band-panel.compact h3 {
+  color: #fdf7ee;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.band-panel.compact .empty {
+  color: #d8e6e1;
 }
 
 .detail-grid {
@@ -328,30 +463,6 @@ summary::marker {
   padding-top: 0.75rem;
 }
 
-.chip-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 1rem 0;
-}
-
-.chip {
-  padding: 0.45rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 0.85rem;
-}
-
-.chip.good {
-  background: rgba(180, 239, 210, 0.25);
-  color: #b4f2d5;
-}
-
-.chip.warn {
-  background: rgba(245, 209, 140, 0.3);
-  color: #f3d28f;
-}
-
 .summary-block {
   margin-top: 1.2rem;
 }
@@ -375,18 +486,6 @@ summary::marker {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
   padding: 0.35rem 0.6rem;
-}
-
-.confidence {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  height: 8px;
-  overflow: hidden;
-}
-
-.confidence-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #f0b14a 0%, #b1f3d0 100%);
 }
 
 .primary {
@@ -415,6 +514,11 @@ summary::marker {
 
   .summary {
     position: static;
+  }
+
+  .top-nav {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

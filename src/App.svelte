@@ -1,5 +1,6 @@
 <script>
   import { CONFIG, calculateTax } from "./lib/calculator.js";
+  import BandPanel from "./components/BandPanel.svelte";
 
   const formatGBP = (value) =>
     new Intl.NumberFormat("en-GB", {
@@ -7,6 +8,7 @@
       currency: "GBP",
       maximumFractionDigits: 0
     }).format(value);
+  const formatPercent = (value) => `${(value * 100).toFixed(1)}%`;
 
   let form = {
     employmentIncome: 60000,
@@ -21,33 +23,285 @@
     seisInvestment: 0,
     vctInvestment: 0
   };
+  let view = "home";
+  const goTo = (next) => {
+    view = next;
+  };
+
+  const bandNote =
+    "Band classification is simplified (standard allowances, no savings interest). It is deterministic and updates as inputs change.";
+
+  const fieldList = [
+    "employmentIncome",
+    "selfEmploymentIncome",
+    "otherIncome",
+    "dividends",
+    "capitalGains",
+    "capitalGainsResidential",
+    "pensionContributions",
+    "eisInvestment",
+    "seisInvestment",
+    "vctInvestment"
+  ];
 
   $: results = calculateTax(form);
-  $: resultsAlt = calculateTax({ ...form, scottishResident: !form.scottishResident });
-  $: scottishDelta = results.totals.incomeTax - resultsAlt.totals.incomeTax;
 
-  $: investmentNotes = (() => {
-    const notes = [];
-    if (results.inputs.eisInvestment > results.reliefs.eisQualifying) {
-      notes.push(
-        `EIS qualifying investment capped at GBP ${results.reliefs.eisQualifying.toLocaleString("en-GB")}.`
-      );
+  $: fieldErrors = fieldList.reduce((errors, key) => {
+    if (form[key] < 0) {
+      errors[key] = "Enter a non-negative amount.";
     }
-    if (results.inputs.seisInvestment > results.reliefs.seisQualifying) {
-      notes.push(
-        `SEIS qualifying investment capped at GBP ${results.reliefs.seisQualifying.toLocaleString("en-GB")}.`
-      );
+    return errors;
+  }, {});
+
+  $: taxYearError = !CONFIG.taxYear ? "Tax year required to classify bands." : "";
+
+  const applyBand = (amount, bandAvailable) => {
+    const used = Math.min(amount, bandAvailable);
+    return {
+      used,
+      remaining: Math.max(0, amount - used),
+      bandRemaining: Math.max(0, bandAvailable - used)
+    };
+  };
+
+  const buildIncomeBands = () => {
+    const taxableIncome = results.totals.taxableNonSavings;
+    if (taxableIncome <= 0) {
+      return {
+        title: "Income tax band",
+        empty: "No taxable income entered yet."
+      };
     }
-    if (results.inputs.vctInvestment > results.reliefs.vctQualifying) {
-      notes.push(
-        `VCT qualifying investment capped at GBP ${results.reliefs.vctQualifying.toLocaleString("en-GB")}.`
-      );
+
+    if (form.scottishResident) {
+      const scottishMeta = [
+        { name: "Starter rate", rate: 0.19, lower: 12571, upper: 15397 },
+        { name: "Basic rate", rate: 0.2, lower: 15398, upper: 27491 },
+        { name: "Intermediate rate", rate: 0.21, lower: 27492, upper: 43662 },
+        { name: "Higher rate", rate: 0.42, lower: 43663, upper: 75000 },
+        { name: "Advanced rate", rate: 0.45, lower: 75001, upper: 125140 },
+        { name: "Top rate", rate: 0.48, lower: 125141, upper: null }
+      ];
+      let remaining = taxableIncome;
+      let lowerLimit = 0;
+      const entries = CONFIG.scotlandBands.reduce((acc, band, index) => {
+        if (remaining <= 0) {
+          return acc;
+        }
+        const bandSize =
+          band.limit === Number.POSITIVE_INFINITY ? remaining : band.limit - lowerLimit;
+        const used = Math.min(remaining, bandSize);
+        if (used > 0) {
+          const meta = scottishMeta[index];
+          acc.push({
+            label: meta.name,
+            rate: formatPercent(meta.rate),
+            amount: formatGBP(used),
+            range: meta.upper
+              ? `GBP ${meta.lower.toLocaleString("en-GB")} to GBP ${meta.upper.toLocaleString("en-GB")}`
+              : `Over GBP ${meta.lower.toLocaleString("en-GB")}`
+          });
+        }
+        remaining -= used;
+        lowerLimit = band.limit;
+        return acc;
+      }, []);
+      return {
+        title: "Income tax bands (Scotland)",
+        entries,
+        effectiveRate: formatPercent(
+          taxableIncome > 0 ? results.totals.incomeTax / taxableIncome : 0
+        ),
+        why: `Your taxable income after allowances is ${formatGBP(
+          taxableIncome
+        )}, so it spans the bands listed above.`,
+        changes: [
+          "Pension contributions (reduce taxable income).",
+          "Additional earnings or self-employment income.",
+          "Changing Scottish residency status."
+        ]
+      };
     }
-    if (notes.length === 0) {
-      notes.push("All investment inputs are within standard qualifying limits.");
+
+    const basicBand = CONFIG.basicRateBand + form.pensionContributions;
+    const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
+    const basicUsed = Math.min(taxableIncome, basicBand);
+    const higherUsed = Math.min(
+      Math.max(0, taxableIncome - basicBand),
+      Math.max(0, higherBandLimit)
+    );
+    const additionalUsed = Math.max(0, taxableIncome - basicBand - higherBandLimit);
+
+    const entries = [];
+    if (basicUsed > 0) {
+      entries.push({
+        label: "Basic rate",
+        rate: "20%",
+        amount: formatGBP(basicUsed),
+        range: `GBP 12,571 to GBP ${(CONFIG.personalAllowance + basicBand).toLocaleString("en-GB")}`
+      });
     }
-    return notes;
-  })();
+    if (higherUsed > 0) {
+      entries.push({
+        label: "Higher rate",
+        rate: "40%",
+        amount: formatGBP(higherUsed),
+        range: `GBP ${(CONFIG.personalAllowance + basicBand + 1).toLocaleString("en-GB")} to GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`
+      });
+    }
+    if (additionalUsed > 0) {
+      entries.push({
+        label: "Additional rate",
+        rate: "45%",
+        amount: formatGBP(additionalUsed),
+        range: `Over GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`
+      });
+    }
+
+    return {
+      title: "Income tax bands (UK)",
+      entries,
+      effectiveRate: formatPercent(
+        taxableIncome > 0 ? results.totals.incomeTax / taxableIncome : 0
+      ),
+      why: `Your taxable income after allowances is ${formatGBP(
+        taxableIncome
+      )}, so it spans the bands listed above.`,
+      changes: [
+        "Pension contributions (reduce taxable income).",
+        "Additional earnings or self-employment income.",
+        "Changing Scottish residency status."
+      ]
+    };
+  };
+
+  const buildDividendBands = () => {
+    const taxableDividends = results.totals.taxableDividends;
+    if (taxableDividends <= 0) {
+      return {
+        title: "Dividend tax bands",
+        empty: "No taxable dividends entered yet."
+      };
+    }
+
+    const basicBand = CONFIG.basicRateBand + form.pensionContributions;
+    const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
+    const basicUsedByIncome = Math.min(results.totals.taxableNonSavings, basicBand);
+    const higherUsedByIncome = Math.min(
+      Math.max(0, results.totals.taxableNonSavings - basicBand),
+      Math.max(0, higherBandLimit)
+    );
+    let basicRemaining = Math.max(0, basicBand - basicUsedByIncome);
+    let higherRemaining = Math.max(0, higherBandLimit - higherUsedByIncome);
+
+    let remaining = taxableDividends;
+    const entries = [];
+    const basicUsed = Math.min(remaining, basicRemaining);
+    if (basicUsed > 0) {
+      entries.push({
+        label: "Basic dividend rate",
+        rate: "8.75%",
+        amount: formatGBP(basicUsed),
+        range: "Within basic rate band"
+      });
+    }
+    remaining -= basicUsed;
+    const higherUsed = Math.min(remaining, higherRemaining);
+    if (higherUsed > 0) {
+      entries.push({
+        label: "Higher dividend rate",
+        rate: "33.75%",
+        amount: formatGBP(higherUsed),
+        range: "Within higher rate band"
+      });
+    }
+    remaining -= higherUsed;
+    if (remaining > 0) {
+      entries.push({
+        label: "Additional dividend rate",
+        rate: "39.35%",
+        amount: formatGBP(remaining),
+        range: "Above higher rate band"
+      });
+    }
+
+    return {
+      title: "Dividend tax bands",
+      entries,
+      effectiveRate: formatPercent(
+        taxableDividends > 0 ? results.totals.dividendTax / taxableDividends : 0
+      ),
+      why: `Your taxable dividends are ${formatGBP(
+        taxableDividends
+      )}, so they fall into the bands listed above.`,
+      changes: [
+        "Changes in taxable income (affects available basic rate band).",
+        "Dividend allowance changes.",
+        "Additional dividend income."
+      ]
+    };
+  };
+
+  const buildCgtBands = () => {
+    const aeaRemaining = Math.max(0, CONFIG.cgtAnnualExempt - form.capitalGains);
+    const nonResAfter = Math.max(0, form.capitalGains - CONFIG.cgtAnnualExempt);
+    const resAfter = Math.max(0, form.capitalGainsResidential - aeaRemaining);
+    const taxableGains = nonResAfter + resAfter;
+
+    if (taxableGains <= 0) {
+      return {
+        title: "Capital gains tax bands",
+        empty: "No taxable capital gains entered yet."
+      };
+    }
+
+    const basicBand = CONFIG.basicRateBand + form.pensionContributions;
+    const taxableIncomeForCgt = results.totals.taxableNonSavings + results.totals.taxableDividends;
+    let basicRemaining = Math.max(0, basicBand - taxableIncomeForCgt);
+
+    const nonResBand = applyBand(nonResAfter, basicRemaining);
+    basicRemaining = nonResBand.bandRemaining;
+    const resBand = applyBand(resAfter, basicRemaining);
+
+    const basicTotal = nonResBand.used + resBand.used;
+    const higherTotal = nonResBand.remaining + resBand.remaining;
+
+    const entries = [];
+    if (basicTotal > 0) {
+      entries.push({
+        label: "Lower CGT rate",
+        rate: "18%",
+        amount: formatGBP(basicTotal),
+        range: "Within basic rate band"
+      });
+    }
+    if (higherTotal > 0) {
+      entries.push({
+        label: "Higher CGT rate",
+        rate: "24%",
+        amount: formatGBP(higherTotal),
+        range: "Above basic rate band"
+      });
+    }
+
+    return {
+      title: "Capital gains tax bands",
+      entries,
+      effectiveRate: formatPercent(
+        taxableGains > 0 ? results.totals.capitalGainsTax / taxableGains : 0
+      ),
+      why: `Your taxable gains are ${formatGBP(
+        taxableGains
+      )}, so they span the CGT bands listed above.`,
+      changes: [
+        "Changes in taxable income (affects available basic rate band).",
+        "Annual exempt amount usage.",
+        "Additional gains."
+      ]
+    };
+  };
+
+  $: bandPanels = [buildIncomeBands(), buildDividendBands(), buildCgtBands()];
 
   const assumptions = [
     `Tax year modeled: ${CONFIG.taxYear}. Rates are for England/Wales/NI unless Scottish resident is selected.`,
@@ -122,294 +376,336 @@
 
 <header class="site-header">
   <div class="container">
+    <nav class="top-nav">
+      <div class="brand">Tax Liability Explorer</div>
+      <div class="nav-links">
+        <button class={`nav-button ${view === "home" ? "active" : ""}`} on:click={() => goTo("home")}>
+          Home
+        </button>
+        <button
+          class={`nav-button ${view === "explorer" ? "active" : ""}`}
+          on:click={() => goTo("explorer")}
+        >
+          Tax explorer
+        </button>
+      </div>
+    </nav>
     <div class="trust-row">
-      <span class="pill">Tax year {CONFIG.taxYear}</span>
+      <span class="pill">Tax year {CONFIG.taxYear || "Not set"}</span>
       <span class="pill">Sources: GOV.UK</span>
-      <span class="pill warning">Education only — not tax advice</span>
+      <span class="pill warning">Educational only — not tax advice</span>
     </div>
     <h1>See your UK tax clearly — and how EIS, SEIS, and VCT reliefs change it</h1>
     <p class="lede">
       A calm, transparent view of income tax, dividend tax, and capital gains tax with reliefs
-      explained in plain English. You stay in control: simple inputs first, deeper detail when you
-      ask for it.
+      explained in plain English. Simple inputs first, detail on demand.
     </p>
   </div>
 </header>
 
 <main class="container">
-  <div class="layout">
-    <section class="flow">
-      <section class="card step" aria-labelledby="step-1">
-        <div class="step-header">
-          <div class="step-number">1</div>
-          <div>
-            <h2 id="step-1">Income snapshot</h2>
-            <p class="step-subtitle">Start with the basics. We use this to place you in the right bands.</p>
-          </div>
-        </div>
-        <div class="grid">
-          <div class="field">
-            <label for="employmentIncome">Employment income</label>
-            <input
-              id="employmentIncome"
-              type="number"
-              min="0"
-              step="100"
-              bind:value={form.employmentIncome}
-            />
-          </div>
-          <div class="field">
-            <label for="selfEmploymentIncome">Self-employment income</label>
-            <input
-              id="selfEmploymentIncome"
-              type="number"
-              min="0"
-              step="100"
-              bind:value={form.selfEmploymentIncome}
-            />
-          </div>
-          <div class="field">
-            <label for="otherIncome">Other taxable income</label>
-            <input
-              id="otherIncome"
-              type="number"
-              min="0"
-              step="100"
-              bind:value={form.otherIncome}
-            />
-          </div>
-          <div class="field">
-            <label for="dividends">Dividends</label>
-            <input id="dividends" type="number" min="0" step="100" bind:value={form.dividends} />
-          </div>
-          <div class="field">
-            <label for="capitalGains">Capital gains (non-residential assets)</label>
-            <input
-              id="capitalGains"
-              type="number"
-              min="0"
-              step="100"
-              bind:value={form.capitalGains}
-            />
-          </div>
-          <div class="field">
-            <label for="capitalGainsResidential">Capital gains (residential property)</label>
-            <input
-              id="capitalGainsResidential"
-              type="number"
-              min="0"
-              step="100"
-              bind:value={form.capitalGainsResidential}
-            />
-          </div>
-          <div class="field">
-            <label for="pensionContributions">Gross personal pension contributions</label>
-            <input
-              id="pensionContributions"
-              type="number"
-              min="0"
-              step="100"
-              bind:value={form.pensionContributions}
-            />
-            <p class="helper">Relief at source only; extends basic rate band.</p>
-          </div>
-          <div class="field checkbox">
-            <label for="scottishResident">Scottish resident (income tax bands only)</label>
-            <div class="checkbox-row">
-              <input
-                id="scottishResident"
-                type="checkbox"
-                bind:checked={form.scottishResident}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card step" aria-labelledby="step-2">
-        <div class="step-header">
-          <div class="step-number">2</div>
-          <div>
-            <h2 id="step-2">Relief options</h2>
-            <p class="step-subtitle">Add qualifying investments and see how much income tax relief they unlock.</p>
-          </div>
-        </div>
-        <div class="grid">
-          <div class="field">
-            <label for="eisInvestment">EIS amount</label>
-            <input id="eisInvestment" type="number" min="0" step="100" bind:value={form.eisInvestment} />
-            <p class="helper">30% relief up to GBP 1,000,000.</p>
-          </div>
-          <div class="field">
-            <label for="seisInvestment">SEIS amount</label>
-            <input id="seisInvestment" type="number" min="0" step="100" bind:value={form.seisInvestment} />
-            <p class="helper">50% relief up to GBP 200,000.</p>
-          </div>
-          <div class="field">
-            <label for="vctInvestment">VCT amount</label>
-            <input id="vctInvestment" type="number" min="0" step="100" bind:value={form.vctInvestment} />
-            <p class="helper">20% relief up to GBP 200,000.</p>
-          </div>
-        </div>
-        <div class="note-strip">
-          <strong>Remember:</strong> Reliefs offset income tax only. CGT stays payable in this model.
-        </div>
-      </section>
-
-      <section class="card step" aria-labelledby="step-3">
-        <div class="step-header">
-          <div class="step-number">3</div>
-          <div>
-            <h2 id="step-3">Understand the calculation</h2>
-            <p class="step-subtitle">Expand the pieces you care about. Start simple, then go deeper.</p>
-          </div>
-        </div>
-        <details>
-          <summary>How we calculated your income tax</summary>
-          <div class="detail-grid">
-            <div>
-              <p class="detail-label">Adjusted net income</p>
-              <p class="detail-value">{formatGBP(results.totals.adjustedNetIncome)}</p>
-            </div>
-            <div>
-              <p class="detail-label">Personal allowance used</p>
-              <p class="detail-value">{formatGBP(results.totals.personalAllowance)}</p>
-            </div>
-            <div>
-              <p class="detail-label">Taxable non-savings income</p>
-              <p class="detail-value">{formatGBP(results.totals.taxableNonSavings)}</p>
-            </div>
-            <div>
-              <p class="detail-label">Taxable dividends</p>
-              <p class="detail-value">{formatGBP(results.totals.taxableDividends)}</p>
-            </div>
-          </div>
-          <p class="detail-note">
-            Scottish bands apply to non-savings income only. Dividend tax and CGT use UK bands in this model.
-          </p>
-        </details>
-        <details>
-          <summary>Relief mechanics (EIS / SEIS / VCT)</summary>
-          <ul class="notes">
-            <li>Reliefs offset your income tax liability in the tax year (EIS/SEIS can be carried back).</li>
-            <li>Qualifying shares must be held for 3 years (EIS/SEIS) or 5 years (VCT) to avoid clawback.</li>
-            <li>Additional CGT reliefs exist for EIS/SEIS but are not modelled here.</li>
-          </ul>
-        </details>
-        <details>
-          <summary>Rates snapshot</summary>
-          <div class="rates-grid">
-            <div>
-              <h3>England/Wales/NI income tax bands</h3>
-              <table class="rates-table">
-                <thead>
-                  <tr>
-                    <th>Band</th>
-                    <th>Taxable income</th>
-                    <th>Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each ukBands as band}
-                    <tr>
-                      <td>{band.band}</td>
-                      <td>{band.income}</td>
-                      <td>{band.rate}</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <h3>Scottish income tax bands</h3>
-              <table class="rates-table">
-                <thead>
-                  <tr>
-                    <th>Band</th>
-                    <th>Taxable income</th>
-                    <th>Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each scotlandBands as band}
-                    <tr>
-                      <td>{band.band}</td>
-                      <td>{band.income}</td>
-                      <td>{band.rate}</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </details>
-        <details>
-          <summary>Assumptions & sources</summary>
-          <ul class="notes">
-            {#each assumptions as item}
-              <li>{item}</li>
-            {/each}
-          </ul>
-          <p class="meta">Rates updated on {ratesUpdated}.</p>
-          <ul class="notes">
-            {#each sources as source}
-              <li><a href={source.href} target="_blank" rel="noopener">{source.label}</a></li>
-            {/each}
-          </ul>
-        </details>
-      </section>
+  {#if view === "home"}
+    <section class="card home-card">
+      <h2>Start with a simple tax snapshot</h2>
+      <p>
+        Enter your income, dividends, and gains to see which tax bands apply and how reliefs reduce
+        your income tax liability. The model is deterministic and based on stated assumptions.
+      </p>
+      <ul class="notes">
+        <li>Shows income tax, dividend tax, and capital gains tax bands as you type.</li>
+        <li>Explains marginal vs. effective rates in plain English.</li>
+        <li>Highlights which part of your income tax can be relieved.</li>
+      </ul>
+      <button class="primary" type="button" on:click={() => goTo("explorer")}>
+        Open tax explorer
+      </button>
     </section>
-
-    <aside class="summary">
-      <div class="summary-card">
-        <p class="summary-title">Your tax summary</p>
-        <div class="summary-row">
-          <span>Baseline tax</span>
-          <strong>{formatGBP(results.totals.baselineTax)}</strong>
-        </div>
-        <div class="summary-row">
-          <span>Relief available</span>
-          <strong>{formatGBP(results.totals.reliefUsed)}</strong>
-        </div>
-        <div class="summary-row total">
-          <span>Residual tax after reliefs</span>
-          <strong>{formatGBP(results.totals.residualTax)}</strong>
-        </div>
-
-        <div class="chip-row">
-          <span class="chip">
-            Relief reduces tax by {formatGBP(results.totals.reliefUsed)}
-          </span>
-          <span class={`chip ${scottishDelta >= 0 ? "warn" : "good"}`}>
-            {#if form.scottishResident}
-              Scottish bands change income tax by {formatGBP(Math.abs(scottishDelta))}
-            {:else}
-              Scottish bands would change income tax by {formatGBP(Math.abs(scottishDelta))}
-            {/if}
-          </span>
-        </div>
-
-        <div class="summary-block">
-          <p class="summary-label">What this covers</p>
-          <div class="coverage">
-            <span>Income tax</span>
-            <span>Dividend tax</span>
-            <span>Capital gains</span>
+  {:else}
+    <div class="layout">
+      <section class="flow">
+        {#if taxYearError}
+          <div class="error-banner">{taxYearError}</div>
+        {/if}
+        <section class="card step" aria-labelledby="step-1">
+          <div class="step-header">
+            <div class="step-number">1</div>
+            <div>
+              <h2 id="step-1">Income snapshot</h2>
+              <p class="step-subtitle">Start with the basics. We use this to place you in the right bands.</p>
+            </div>
           </div>
-        </div>
-
-        <div class="summary-block">
-          <p class="summary-label">Confidence</p>
-          <div class="confidence">
-            <div class="confidence-bar" style={`width: 78%`}></div>
+          <div class="grid">
+            <div class="field">
+              <label for="employmentIncome">Employment income</label>
+              <input
+                id="employmentIncome"
+                type="number"
+                min="0"
+                step="100"
+                bind:value={form.employmentIncome}
+              />
+              {#if fieldErrors.employmentIncome}
+                <p class="error">{fieldErrors.employmentIncome}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="selfEmploymentIncome">Self-employment income</label>
+              <input
+                id="selfEmploymentIncome"
+                type="number"
+                min="0"
+                step="100"
+                bind:value={form.selfEmploymentIncome}
+              />
+              {#if fieldErrors.selfEmploymentIncome}
+                <p class="error">{fieldErrors.selfEmploymentIncome}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="otherIncome">Other taxable income</label>
+              <input
+                id="otherIncome"
+                type="number"
+                min="0"
+                step="100"
+                bind:value={form.otherIncome}
+              />
+              {#if fieldErrors.otherIncome}
+                <p class="error">{fieldErrors.otherIncome}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="dividends">Dividends</label>
+              <input id="dividends" type="number" min="0" step="100" bind:value={form.dividends} />
+              {#if fieldErrors.dividends}
+                <p class="error">{fieldErrors.dividends}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="capitalGains">Capital gains (non-residential assets)</label>
+              <input
+                id="capitalGains"
+                type="number"
+                min="0"
+                step="100"
+                bind:value={form.capitalGains}
+              />
+              {#if fieldErrors.capitalGains}
+                <p class="error">{fieldErrors.capitalGains}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="capitalGainsResidential">Capital gains (residential property)</label>
+              <input
+                id="capitalGainsResidential"
+                type="number"
+                min="0"
+                step="100"
+                bind:value={form.capitalGainsResidential}
+              />
+              {#if fieldErrors.capitalGainsResidential}
+                <p class="error">{fieldErrors.capitalGainsResidential}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="pensionContributions">Gross personal pension contributions</label>
+              <input
+                id="pensionContributions"
+                type="number"
+                min="0"
+                step="100"
+                bind:value={form.pensionContributions}
+              />
+              <p class="helper">Relief at source only; extends basic rate band.</p>
+              {#if fieldErrors.pensionContributions}
+                <p class="error">{fieldErrors.pensionContributions}</p>
+              {/if}
+            </div>
+            <div class="field checkbox">
+              <label for="scottishResident">Scottish resident (income tax bands only)</label>
+              <div class="checkbox-row">
+                <input
+                  id="scottishResident"
+                  type="checkbox"
+                  bind:checked={form.scottishResident}
+                />
+              </div>
+            </div>
           </div>
-          <p class="helper">Based on your inputs and stated assumptions.</p>
-        </div>
+          <div class="band-panel-slot">
+            <BandPanel title="Band classification panel" panels={bandPanels} note={bandNote} />
+          </div>
+        </section>
 
-        <button class="primary" type="button">Recalculate</button>
-      </div>
-    </aside>
-  </div>
+        <section class="card step" aria-labelledby="step-2">
+          <div class="step-header">
+            <div class="step-number">2</div>
+            <div>
+              <h2 id="step-2">Relief options</h2>
+              <p class="step-subtitle">Add qualifying investments and see how much income tax relief they unlock.</p>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label for="eisInvestment">EIS amount</label>
+              <input id="eisInvestment" type="number" min="0" step="100" bind:value={form.eisInvestment} />
+              <p class="helper">30% relief up to GBP 1,000,000.</p>
+              {#if fieldErrors.eisInvestment}
+                <p class="error">{fieldErrors.eisInvestment}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="seisInvestment">SEIS amount</label>
+              <input id="seisInvestment" type="number" min="0" step="100" bind:value={form.seisInvestment} />
+              <p class="helper">50% relief up to GBP 200,000.</p>
+              {#if fieldErrors.seisInvestment}
+                <p class="error">{fieldErrors.seisInvestment}</p>
+              {/if}
+            </div>
+            <div class="field">
+              <label for="vctInvestment">VCT amount</label>
+              <input id="vctInvestment" type="number" min="0" step="100" bind:value={form.vctInvestment} />
+              <p class="helper">20% relief up to GBP 200,000.</p>
+              {#if fieldErrors.vctInvestment}
+                <p class="error">{fieldErrors.vctInvestment}</p>
+              {/if}
+            </div>
+          </div>
+          <div class="note-strip">
+            <strong>Remember:</strong> Reliefs offset income tax only. CGT stays payable in this model.
+          </div>
+        </section>
+
+        <section class="card step" aria-labelledby="step-3">
+          <div class="step-header">
+            <div class="step-number">3</div>
+            <div>
+              <h2 id="step-3">Understand the calculation</h2>
+              <p class="step-subtitle">Expand the pieces you care about. Start simple, then go deeper.</p>
+            </div>
+          </div>
+          <details>
+            <summary>How we calculated your income tax</summary>
+            <div class="detail-grid">
+              <div>
+                <p class="detail-label">Adjusted net income</p>
+                <p class="detail-value">{formatGBP(results.totals.adjustedNetIncome)}</p>
+              </div>
+              <div>
+                <p class="detail-label">Personal allowance used</p>
+                <p class="detail-value">{formatGBP(results.totals.personalAllowance)}</p>
+              </div>
+              <div>
+                <p class="detail-label">Taxable non-savings income</p>
+                <p class="detail-value">{formatGBP(results.totals.taxableNonSavings)}</p>
+              </div>
+              <div>
+                <p class="detail-label">Taxable dividends</p>
+                <p class="detail-value">{formatGBP(results.totals.taxableDividends)}</p>
+              </div>
+            </div>
+            <p class="detail-note">
+              Scottish bands apply to non-savings income only. Dividend tax and CGT use UK bands in this model.
+            </p>
+          </details>
+          <details>
+            <summary>Relief mechanics (EIS / SEIS / VCT)</summary>
+            <ul class="notes">
+              <li>Reliefs offset your income tax liability in the tax year (EIS/SEIS can be carried back).</li>
+              <li>Qualifying shares must be held for 3 years (EIS/SEIS) or 5 years (VCT) to avoid clawback.</li>
+              <li>Additional CGT reliefs exist for EIS/SEIS but are not modelled here.</li>
+            </ul>
+          </details>
+          <details>
+            <summary>Rates snapshot</summary>
+            <div class="rates-grid">
+              <div>
+                <h3>England/Wales/NI income tax bands</h3>
+                <table class="rates-table">
+                  <thead>
+                    <tr>
+                      <th>Band</th>
+                      <th>Taxable income</th>
+                      <th>Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#each ukBands as band}
+                      <tr>
+                        <td>{band.band}</td>
+                        <td>{band.income}</td>
+                        <td>{band.rate}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3>Scottish income tax bands</h3>
+                <table class="rates-table">
+                  <thead>
+                    <tr>
+                      <th>Band</th>
+                      <th>Taxable income</th>
+                      <th>Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#each scotlandBands as band}
+                      <tr>
+                        <td>{band.band}</td>
+                        <td>{band.income}</td>
+                        <td>{band.rate}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </details>
+          <details>
+            <summary>Assumptions & sources</summary>
+            <ul class="notes">
+              {#each assumptions as item}
+                <li>{item}</li>
+              {/each}
+            </ul>
+            <p class="meta">Rates updated on {ratesUpdated}.</p>
+            <ul class="notes">
+              {#each sources as source}
+                <li><a href={source.href} target="_blank" rel="noopener">{source.label}</a></li>
+              {/each}
+            </ul>
+          </details>
+        </section>
+      </section>
+
+      <aside class="summary">
+        <div class="summary-card">
+          <p class="summary-title">Your tax summary</p>
+          <div class="summary-row">
+            <span>Baseline tax</span>
+            <strong>{formatGBP(results.totals.baselineTax)}</strong>
+          </div>
+          <div class="summary-row">
+            <span>Relief used</span>
+            <strong>{formatGBP(results.totals.reliefUsed)}</strong>
+          </div>
+          <div class="summary-row total">
+            <span>Residual tax after reliefs</span>
+            <strong>{formatGBP(results.totals.residualTax)}</strong>
+          </div>
+
+          <div class="summary-block">
+            <p class="summary-label">Relief context</p>
+            <p class="helper">Reliefs reduce income tax only; dividend tax and CGT bands stay the same.</p>
+          </div>
+
+          <BandPanel title="Band classification panel" panels={bandPanels} note={bandNote} compact />
+        </div>
+      </aside>
+    </div>
+  {/if}
 </main>
 
 <footer class="site-footer">

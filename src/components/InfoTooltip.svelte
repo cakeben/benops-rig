@@ -100,7 +100,7 @@
     on:keydown={handleKey}
     on:focus={openTooltip}
   >
-    (i)
+    ?
   </button>
   {#if open}
     <div class={`tooltip-panel ${position}`} id={`${id}-tip`} role="tooltip">

@@ -486,7 +486,14 @@
               {/if}
             </div>
             <div class="field">
-              <label for="otherIncome">Other taxable income</label>
+            <label for="otherIncome">
+              Other taxable income
+              <InfoTooltip id="other-income" label="Explain other taxable income" registry={tooltipRegistry}>
+                <p><strong>Enter:</strong> taxable income not covered elsewhere (e.g., rental profit after expenses).</p>
+                <p><strong>Do not enter:</strong> employment pay, dividends, or capital gains.</p>
+                <p><strong>Example:</strong> Rental profit of GBP 6,500 after costs → enter 6,500.</p>
+              </InfoTooltip>
+            </label>
               <input
                 id="otherIncome"
                 type="number"
@@ -533,7 +540,14 @@
               {/if}
             </div>
             <div class="field">
-              <label for="capitalGainsResidential">Capital gains (residential property)</label>
+            <label for="capitalGainsResidential">
+              Capital gains (residential property)
+              <InfoTooltip id="residential-gains" label="Explain residential capital gains" registry={tooltipRegistry}>
+                <p><strong>Enter:</strong> taxable gain on residential property (sale price minus costs and reliefs).</p>
+                <p><strong>Do not enter:</strong> the full sale price or gross proceeds.</p>
+                <p><strong>Example:</strong> Property sold for GBP 300,000, cost GBP 250,000 → gain GBP 50,000.</p>
+              </InfoTooltip>
+            </label>
               <input
                 id="capitalGainsResidential"
                 type="number"
@@ -732,9 +746,19 @@
             <span>Baseline tax</span>
             <strong>{formatGBP(results.totals.baselineTax)}</strong>
           </div>
+          <div class="summary-breakdown">
+            <span>Income tax: {formatGBP(results.totals.incomeTax)}</span>
+            <span>Dividend tax: {formatGBP(results.totals.dividendTax)}</span>
+            <span>Capital gains tax: {formatGBP(results.totals.capitalGainsTax)}</span>
+          </div>
           <div class="summary-row">
             <span>Relief used</span>
             <strong>{formatGBP(results.totals.reliefUsed)}</strong>
+          </div>
+          <div class="summary-breakdown">
+            <span>EIS relief: {formatGBP(results.reliefs.eisRelief)}</span>
+            <span>SEIS relief: {formatGBP(results.reliefs.seisRelief)}</span>
+            <span>VCT relief: {formatGBP(results.reliefs.vctRelief)}</span>
           </div>
           <div class="summary-row total">
             <span>Residual tax after reliefs</span>

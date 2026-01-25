@@ -284,9 +284,10 @@ summary::marker {
   color: var(--accent);
   background: #fff;
   border-radius: 999px;
-  width: 20px;
-  height: 20px;
-  font-size: 0.7rem;
+  width: 22px;
+  height: 22px;
+  font-size: 0.8rem;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -515,6 +516,14 @@ summary::marker {
   font-weight: 700;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   padding-top: 0.75rem;
+}
+
+.summary-breakdown {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #d8e6e1;
+  margin: 0.3rem 0 0.75rem;
 }
 
 .summary-block {

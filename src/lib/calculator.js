@@ -1,65 +1,14 @@
-export const CONFIG = {
-  taxYear: "2025/26",
-  personalAllowance: 12570,
-  personalAllowanceTaperStart: 100000,
-  personalAllowanceZeroAt: 125140,
-  basicRateBand: 37700,
-  higherRateThreshold: 125140,
-  dividendAllowance: 500,
-  cgtAnnualExempt: 3000,
-  scotlandBands: [
-    { limit: 2827, rate: 0.19 },
-    { limit: 14921, rate: 0.2 },
-    { limit: 31092, rate: 0.21 },
-    { limit: 62430, rate: 0.42 },
-    { limit: 112570, rate: 0.45 },
-    { limit: Number.POSITIVE_INFINITY, rate: 0.48 }
-  ],
-  rates: {
-    income: {
-      basic: 0.2,
-      higher: 0.4,
-      additional: 0.45
-    },
-    dividends: {
-      basic: 0.0875,
-      higher: 0.3375,
-      additional: 0.3935
-    },
-    cgt: {
-      nonResidential: {
-        basic: 0.18,
-        higher: 0.24
-      },
-      residential: {
-        basic: 0.18,
-        higher: 0.24
-      }
-    }
-  },
-  reliefLimits: {
-    eis: 1_000_000,
-    seis: 200_000,
-    vct: 200_000
-  },
-  reliefRates: {
-    eis: 0.3,
-    seis: 0.5,
-    vct: 0.2
-  }
-};
-
 const clamp = (value) => Math.max(0, Number(value) || 0);
 
-const personalAllowance = (adjustedNetIncome) => {
-  if (adjustedNetIncome <= CONFIG.personalAllowanceTaperStart) {
-    return CONFIG.personalAllowance;
+const personalAllowance = (adjustedNetIncome, rules) => {
+  if (adjustedNetIncome <= rules.personalAllowanceTaperStart) {
+    return rules.personalAllowance;
   }
-  if (adjustedNetIncome >= CONFIG.personalAllowanceZeroAt) {
+  if (adjustedNetIncome >= rules.personalAllowanceZeroAt) {
     return 0;
   }
-  const reduction = (adjustedNetIncome - CONFIG.personalAllowanceTaperStart) / 2;
-  return Math.max(0, CONFIG.personalAllowance - reduction);
+  const reduction = (adjustedNetIncome - rules.personalAllowanceTaperStart) * rules.taperRate;
+  return Math.max(0, rules.personalAllowance - reduction);
 };
 
 const applyBand = (amount, bandAvailable) => {
@@ -71,11 +20,11 @@ const applyBand = (amount, bandAvailable) => {
   };
 };
 
-const calculateScottishIncomeTax = (taxableNonSavings) => {
+const calculateScottishIncomeTax = (taxableNonSavings, rules) => {
   let remaining = taxableNonSavings;
   let tax = 0;
   let lowerLimit = 0;
-  CONFIG.scotlandBands.forEach((band) => {
+  rules.scotlandBands.forEach((band) => {
     if (remaining <= 0) {
       return;
     }
@@ -89,7 +38,7 @@ const calculateScottishIncomeTax = (taxableNonSavings) => {
   return tax;
 };
 
-export const calculateTax = (inputs) => {
+export const calculateTax = (inputs, rules) => {
   const employmentIncome = clamp(inputs.employmentIncome);
   const selfEmploymentIncome = clamp(inputs.selfEmploymentIncome);
   const otherIncome = clamp(inputs.otherIncome);
@@ -102,16 +51,16 @@ export const calculateTax = (inputs) => {
   const totalIncome = totalNonSavingsIncome + dividends;
   const adjustedNetIncome = Math.max(0, totalIncome - pensionContributions);
 
-  const allowance = personalAllowance(adjustedNetIncome);
+  const allowance = personalAllowance(adjustedNetIncome, rules);
   const allowanceAgainstNonSavings = Math.min(allowance, totalNonSavingsIncome);
   const remainingAllowance = Math.max(0, allowance - allowanceAgainstNonSavings);
 
   const taxableNonSavings = Math.max(0, totalNonSavingsIncome - allowanceAgainstNonSavings);
   const dividendsAfterAllowance = Math.max(0, dividends - remainingAllowance);
-  const taxableDividends = Math.max(0, dividendsAfterAllowance - CONFIG.dividendAllowance);
+  const taxableDividends = Math.max(0, dividendsAfterAllowance - rules.dividendAllowance);
 
-  const basicRateBand = CONFIG.basicRateBand + pensionContributions;
-  const higherBandLimit = CONFIG.higherRateThreshold - basicRateBand;
+  const basicRateBand = rules.basicRateBand + pensionContributions;
+  const higherBandLimit = rules.higherRateThreshold - basicRateBand;
 
   const nonSavingsInBasic = Math.min(taxableNonSavings, basicRateBand);
   const nonSavingsInHigher = Math.min(
@@ -125,10 +74,10 @@ export const calculateTax = (inputs) => {
 
   const isScottish = Boolean(inputs.scottishResident);
   const incomeTax = isScottish
-    ? calculateScottishIncomeTax(taxableNonSavings)
-    : nonSavingsInBasic * CONFIG.rates.income.basic +
-      nonSavingsInHigher * CONFIG.rates.income.higher +
-      nonSavingsInAdditional * CONFIG.rates.income.additional;
+    ? calculateScottishIncomeTax(taxableNonSavings, rules)
+    : nonSavingsInBasic * rules.rates.income.basic +
+      nonSavingsInHigher * rules.rates.income.higher +
+      nonSavingsInAdditional * rules.rates.income.additional;
 
   let basicRemaining = Math.max(0, basicRateBand - nonSavingsInBasic);
   let higherRemaining = Math.max(0, higherBandLimit - nonSavingsInHigher);
@@ -142,13 +91,13 @@ export const calculateTax = (inputs) => {
   const dividendAdditional = Math.max(0, taxableDividends - dividendBasic - dividendHigher);
 
   const dividendTax =
-    dividendBasic * CONFIG.rates.dividends.basic +
-    dividendHigher * CONFIG.rates.dividends.higher +
-    dividendAdditional * CONFIG.rates.dividends.additional;
+    dividendBasic * rules.rates.dividends.basic +
+    dividendHigher * rules.rates.dividends.higher +
+    dividendAdditional * rules.rates.dividends.additional;
 
   const totalIncomeTax = incomeTax + dividendTax;
 
-  let aeaRemaining = CONFIG.cgtAnnualExempt;
+  let aeaRemaining = rules.cgtAnnualExempt;
   const nonResidentialAfterAea = Math.max(0, capitalGains - aeaRemaining);
   aeaRemaining = Math.max(0, aeaRemaining - capitalGains);
   const residentialAfterAea = Math.max(0, capitalGainsResidential - aeaRemaining);
@@ -161,21 +110,21 @@ export const calculateTax = (inputs) => {
   const resBand = applyBand(residentialAfterAea, cgtBasicRemaining);
 
   const cgtNonRes =
-    nonResBand.used * CONFIG.rates.cgt.nonResidential.basic +
-    nonResBand.remaining * CONFIG.rates.cgt.nonResidential.higher;
+    nonResBand.used * rules.rates.cgt.nonResidential.basic +
+    nonResBand.remaining * rules.rates.cgt.nonResidential.higher;
   const cgtRes =
-    resBand.used * CONFIG.rates.cgt.residential.basic +
-    resBand.remaining * CONFIG.rates.cgt.residential.higher;
+    resBand.used * rules.rates.cgt.residential.basic +
+    resBand.remaining * rules.rates.cgt.residential.higher;
 
   const totalCgt = cgtNonRes + cgtRes;
 
-  const eisQualifying = Math.min(clamp(inputs.eisInvestment), CONFIG.reliefLimits.eis);
-  const seisQualifying = Math.min(clamp(inputs.seisInvestment), CONFIG.reliefLimits.seis);
-  const vctQualifying = Math.min(clamp(inputs.vctInvestment), CONFIG.reliefLimits.vct);
+  const eisQualifying = Math.min(clamp(inputs.eisInvestment), rules.reliefLimits.eis);
+  const seisQualifying = Math.min(clamp(inputs.seisInvestment), rules.reliefLimits.seis);
+  const vctQualifying = Math.min(clamp(inputs.vctInvestment), rules.reliefLimits.vct);
 
-  const eisRelief = eisQualifying * CONFIG.reliefRates.eis;
-  const seisRelief = seisQualifying * CONFIG.reliefRates.seis;
-  const vctRelief = vctQualifying * CONFIG.reliefRates.vct;
+  const eisRelief = eisQualifying * rules.reliefRates.eis;
+  const seisRelief = seisQualifying * rules.reliefRates.seis;
+  const vctRelief = vctQualifying * rules.reliefRates.vct;
 
   const totalReliefPotential = eisRelief + seisRelief + vctRelief;
   const reliefUsed = Math.min(totalIncomeTax, totalReliefPotential);

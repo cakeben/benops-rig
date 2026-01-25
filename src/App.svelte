@@ -1,5 +1,6 @@
 <script>
-  import { CONFIG, calculateTax } from "./lib/calculator.js";
+  import { calculateTax } from "./lib/calculator.js";
+  import { TAX_YEARS, getRules } from "../rules/index.js";
   import BandPanel from "./components/BandPanel.svelte";
   import InfoTooltip from "./components/InfoTooltip.svelte";
 
@@ -11,6 +12,8 @@
     }).format(value);
   const formatPercent = (value) => `${(value * 100).toFixed(1)}%`;
 
+  let taxYear = "2025/26";
+  let rules = getRules(taxYear);
   let form = {
     employmentIncome: 60000,
     selfEmploymentIncome: 0,
@@ -31,7 +34,7 @@
   const tooltipRegistry = { active: null };
 
   const bandNote =
-    "Band classification is simplified (standard allowances, no savings interest). It is deterministic and updates as inputs change.";
+    "Band classification uses the selected tax year and updates as inputs change. It is simplified (standard allowances, no savings interest).";
 
   const fieldList = [
     "employmentIncome",
@@ -46,7 +49,8 @@
     "vctInvestment"
   ];
 
-  $: results = calculateTax(form);
+  $: rules = getRules(taxYear);
+  $: results = calculateTax(form, rules);
 
   $: fieldErrors = fieldList.reduce((errors, key) => {
     if (form[key] < 0) {
@@ -55,7 +59,7 @@
     return errors;
   }, {});
 
-  $: taxYearError = !CONFIG.taxYear ? "Tax year required to classify bands." : "";
+  $: taxYearError = !rules?.taxYear ? "Tax year required to classify bands." : "";
 
   const applyBand = (amount, bandAvailable) => {
     const used = Math.min(amount, bandAvailable);
@@ -87,7 +91,7 @@
       ];
       let remaining = taxableIncome;
       let lowerLimit = 0;
-      const entries = CONFIG.scotlandBands.reduce((acc, band, index) => {
+      const entries = rules.scotlandBands.reduce((acc, band, index) => {
         if (remaining <= 0) {
           return acc;
         }
@@ -126,8 +130,8 @@
       };
     }
 
-    const basicBand = CONFIG.basicRateBand + pension;
-    const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
+    const basicBand = rules.basicRateBand + pension;
+    const higherBandLimit = rules.higherRateThreshold - basicBand;
     const basicUsed = Math.min(taxableIncome, basicBand);
     const higherUsed = Math.min(
       Math.max(0, taxableIncome - basicBand),
@@ -141,7 +145,7 @@
         label: "Basic rate",
         rate: "20%",
         amount: formatGBP(basicUsed),
-        range: `GBP 12,571 to GBP ${(CONFIG.personalAllowance + basicBand).toLocaleString("en-GB")}`
+        range: `GBP 12,571 to GBP ${(rules.personalAllowance + basicBand).toLocaleString("en-GB")}`
       });
     }
     if (higherUsed > 0) {
@@ -149,7 +153,7 @@
         label: "Higher rate",
         rate: "40%",
         amount: formatGBP(higherUsed),
-        range: `GBP ${(CONFIG.personalAllowance + basicBand + 1).toLocaleString("en-GB")} to GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`
+        range: `GBP ${(rules.personalAllowance + basicBand + 1).toLocaleString("en-GB")} to GBP ${rules.higherRateThreshold.toLocaleString("en-GB")}`
       });
     }
     if (additionalUsed > 0) {
@@ -157,7 +161,7 @@
         label: "Additional rate",
         rate: "45%",
         amount: formatGBP(additionalUsed),
-        range: `Over GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`
+        range: `Over GBP ${rules.higherRateThreshold.toLocaleString("en-GB")}`
       });
     }
 
@@ -188,8 +192,8 @@
       };
     }
 
-    const basicBand = CONFIG.basicRateBand + pension;
-    const higherBandLimit = CONFIG.higherRateThreshold - basicBand;
+    const basicBand = rules.basicRateBand + pension;
+    const higherBandLimit = rules.higherRateThreshold - basicBand;
     const basicUsedByIncome = Math.min(currentResults.totals.taxableNonSavings, basicBand);
     const higherUsedByIncome = Math.min(
       Math.max(0, currentResults.totals.taxableNonSavings - basicBand),
@@ -250,8 +254,8 @@
     const pension = Number(form.pensionContributions) || 0;
     const gains = Number(form.capitalGains) || 0;
     const residentialGains = Number(form.capitalGainsResidential) || 0;
-    const aeaRemaining = Math.max(0, CONFIG.cgtAnnualExempt - gains);
-    const nonResAfter = Math.max(0, gains - CONFIG.cgtAnnualExempt);
+    const aeaRemaining = Math.max(0, rules.cgtAnnualExempt - gains);
+    const nonResAfter = Math.max(0, gains - rules.cgtAnnualExempt);
     const resAfter = Math.max(0, residentialGains - aeaRemaining);
     const taxableGains = nonResAfter + resAfter;
 
@@ -262,7 +266,7 @@
       };
     }
 
-    const basicBand = CONFIG.basicRateBand + pension;
+    const basicBand = rules.basicRateBand + pension;
     const taxableIncomeForCgt =
       currentResults.totals.taxableNonSavings + currentResults.totals.taxableDividends;
     let basicRemaining = Math.max(0, basicBand - taxableIncomeForCgt);
@@ -312,16 +316,17 @@
   $: bandPanels = results
     ? [buildIncomeBands(results), buildDividendBands(results), buildCgtBands(results)]
     : [];
+  $: isTapered = results?.totals.personalAllowance < rules.personalAllowance;
 
   const assumptions = [
-    `Tax year modeled: ${CONFIG.taxYear}. Rates are for England/Wales/NI unless Scottish resident is selected.`,
-    "Personal allowance is tapered above GBP 100,000 and fully removed at GBP 125,140.",
+    `Tax year modeled: ${rules.taxYear}. Rates are for England/Wales/NI unless Scottish resident is selected.`,
+    `Personal allowance tapers above GBP ${rules.personalAllowanceTaperStart.toLocaleString("en-GB")} and reaches zero at GBP ${rules.personalAllowanceZeroAt.toLocaleString("en-GB")}.`,
     "Gross personal pension contributions reduce adjusted net income and extend the basic rate band.",
-    "Dividend allowance is GBP 500 and applied after personal allowance offsets dividends.",
-    "Capital gains annual exempt amount is GBP 3,000 and is applied to non-residential gains first.",
-    "From 6 April 2025, CGT rates assumed at 18% (basic) and 24% (higher) for residential and other assets.",
+    `Dividend allowance is GBP ${rules.dividendAllowance.toLocaleString("en-GB")} and applied after personal allowance offsets dividends.`,
+    `Capital gains annual exempt amount is GBP ${rules.cgtAnnualExempt.toLocaleString("en-GB")} and is applied to non-residential gains first.`,
+    "CGT rates assumed at 18% (basic) and 24% (higher) for residential and other assets.",
     "EIS/SEIS/VCT reliefs are applied only against income tax liability; unused relief is shown but not carried back here.",
-    "VCT relief rate assumed at 20% for 2025/26; confirm with current HMRC rules.",
+    `VCT relief rate is ${Math.round(rules.reliefRates.vct * 100)}% for ${rules.taxYear}.`,
     "Scottish Income Tax bands are applied only to non-savings income; dividends and CGT still use UK bands in this model."
   ];
 
@@ -345,41 +350,37 @@
     {
       label: "CGT rates from 6 April 2025",
       href: "https://www.gov.uk/capital-gains-tax/rates"
+    },
+    {
+      label: "VCT income tax relief rates (30% and 20% change from 6 April 2026)",
+      href: "https://www.gov.uk/government/publications/enterprise-investment-scheme-eis-and-venture-capital-trusts-vct-changes"
     }
   ];
 
   const ukBands = [
     {
       band: "Personal allowance",
-      income: `Up to GBP ${CONFIG.personalAllowance.toLocaleString("en-GB")}`,
+      income: `Up to GBP ${rules.personalAllowance.toLocaleString("en-GB")}`,
       rate: "0%"
     },
     {
       band: "Basic rate",
-      income: `GBP ${CONFIG.personalAllowance.toLocaleString("en-GB")} to GBP ${(CONFIG.personalAllowance + CONFIG.basicRateBand).toLocaleString("en-GB")}`,
+      income: `GBP ${rules.personalAllowance.toLocaleString("en-GB")} to GBP ${(rules.personalAllowance + rules.basicRateBand).toLocaleString("en-GB")}`,
       rate: "20%"
     },
     {
       band: "Higher rate",
-      income: `GBP ${(CONFIG.personalAllowance + CONFIG.basicRateBand + 1).toLocaleString("en-GB")} to GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`,
+      income: `GBP ${(rules.personalAllowance + rules.basicRateBand + 1).toLocaleString("en-GB")} to GBP ${rules.higherRateThreshold.toLocaleString("en-GB")}`,
       rate: "40%"
     },
     {
       band: "Additional rate",
-      income: `Over GBP ${CONFIG.higherRateThreshold.toLocaleString("en-GB")}`,
+      income: `Over GBP ${rules.higherRateThreshold.toLocaleString("en-GB")}`,
       rate: "45%"
     }
   ];
 
-  const scotlandBands = [
-    { band: "Personal allowance", income: "Up to GBP 12,570", rate: "0%" },
-    { band: "Starter rate", income: "GBP 12,571 to GBP 15,397", rate: "19%" },
-    { band: "Basic rate", income: "GBP 15,398 to GBP 27,491", rate: "20%" },
-    { band: "Intermediate rate", income: "GBP 27,492 to GBP 43,662", rate: "21%" },
-    { band: "Higher rate", income: "GBP 43,663 to GBP 75,000", rate: "42%" },
-    { band: "Advanced rate", income: "GBP 75,001 to GBP 125,140", rate: "45%" },
-    { band: "Top rate", income: "Over GBP 125,140", rate: "48%" }
-  ];
+  const scotlandBands = rules.scotlandDisplayBands;
 
   const ratesUpdated = "2026-01-22";
 </script>
@@ -401,7 +402,7 @@
       </div>
     </nav>
     <div class="trust-row">
-      <span class="pill">Tax year {CONFIG.taxYear || "Not set"}</span>
+      <span class="pill">Tax year {rules.taxYear || "Not set"}</span>
       <span class="pill">Sources: GOV.UK</span>
       <span class="pill warning">Educational only — not tax advice</span>
     </div>
@@ -443,6 +444,14 @@
               <h2 id="step-1">Income snapshot</h2>
               <p class="step-subtitle">Start with the basics. We use this to place you in the right bands.</p>
             </div>
+          </div>
+          <div class="field tax-year">
+            <label for="taxYear">Tax year</label>
+            <select id="taxYear" bind:value={taxYear}>
+              {#each TAX_YEARS as year}
+                <option value={year}>{year}</option>
+              {/each}
+            </select>
           </div>
           <div class="grid">
             <div class="field">
@@ -592,6 +601,15 @@
             </div>
           </div>
           <div class="band-panel-slot">
+            {#if isTapered}
+              <p class="taper-note">
+                Personal allowance is tapered
+                <InfoTooltip id="taper-note" label="Explain personal allowance taper" registry={tooltipRegistry}>
+                  <p>Your Personal Allowance reduces by GBP 1 for every GBP 2 above GBP 100,000.</p>
+                  <p>It is fully withdrawn at GBP {rules.personalAllowanceZeroAt.toLocaleString("en-GB")}.</p>
+                </InfoTooltip>
+              </p>
+            {/if}
             <BandPanel title="Band classification panel" panels={bandPanels} note={bandNote} />
           </div>
         </section>
@@ -624,7 +642,7 @@
             <div class="field">
               <label for="vctInvestment">VCT amount</label>
               <input id="vctInvestment" type="number" min="0" step="100" bind:value={form.vctInvestment} />
-              <p class="helper">20% relief up to GBP 200,000.</p>
+              <p class="helper">{Math.round(rules.reliefRates.vct * 100)}% relief up to GBP 200,000.</p>
               {#if fieldErrors.vctInvestment}
                 <p class="error">{fieldErrors.vctInvestment}</p>
               {/if}
@@ -645,15 +663,23 @@
           </div>
           <details>
             <summary>How we calculated your income tax</summary>
-            <div class="detail-grid">
-              <div>
-                <p class="detail-label">Adjusted net income</p>
-                <p class="detail-value">{formatGBP(results.totals.adjustedNetIncome)}</p>
-              </div>
-              <div>
-                <p class="detail-label">Personal allowance used</p>
-                <p class="detail-value">{formatGBP(results.totals.personalAllowance)}</p>
-              </div>
+          <div class="detail-grid">
+            <div>
+              <p class="detail-label">Adjusted net income</p>
+              <p class="detail-value">{formatGBP(results.totals.adjustedNetIncome)}</p>
+            </div>
+            <div>
+              <p class="detail-label">
+                Personal allowance used
+                {#if results.totals.personalAllowance < rules.personalAllowance}
+                  <InfoTooltip id="tapered-allowance" label="Explain personal allowance taper" registry={tooltipRegistry}>
+                    <p>Your Personal Allowance is reduced by GBP 1 for every GBP 2 of adjusted net income above GBP 100,000.</p>
+                    <p>At GBP {rules.personalAllowanceZeroAt.toLocaleString("en-GB")} or above, the allowance is zero.</p>
+                  </InfoTooltip>
+                {/if}
+              </p>
+              <p class="detail-value">{formatGBP(results.totals.personalAllowance)}</p>
+            </div>
               <div>
                 <p class="detail-label">Taxable non-savings income</p>
                 <p class="detail-value">{formatGBP(results.totals.taxableNonSavings)}</p>
@@ -769,6 +795,16 @@
             <p class="summary-label">Relief context</p>
             <p class="helper">Reliefs reduce income tax only; dividend tax and CGT bands stay the same.</p>
           </div>
+
+          {#if isTapered}
+            <p class="taper-note summary">
+              Personal allowance is tapered
+              <InfoTooltip id="taper-note-summary" label="Explain personal allowance taper" registry={tooltipRegistry}>
+                <p>Your Personal Allowance reduces by GBP 1 for every GBP 2 above GBP 100,000.</p>
+                <p>It is fully withdrawn at GBP {rules.personalAllowanceZeroAt.toLocaleString("en-GB")}.</p>
+              </InfoTooltip>
+            </p>
+          {/if}
 
           <BandPanel title="Band classification panel" panels={bandPanels} note={bandNote} compact />
         </div>

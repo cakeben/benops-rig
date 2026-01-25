@@ -427,6 +427,32 @@ summary::marker {
   color: #d8e6e1;
 }
 
+.taper-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.taper-note.summary {
+  margin-top: 0.75rem;
+  color: #d8e6e1;
+}
+
+.tax-year {
+  max-width: 240px;
+  margin-bottom: 1.5rem;
+}
+
+select {
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-size: 1rem;
+  background: #fff;
+}
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
